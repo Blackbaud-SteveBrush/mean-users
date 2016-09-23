@@ -1,0 +1,7 @@
+{
+"version": 3,
+"mappings": "AAAA,OAAQ,CACN,UAAU,CAAE,IAAI",
+"sources": ["../../public/app/styles/app.scss"],
+"names": [],
+"file": "app.min.css"
+}

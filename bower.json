@@ -1,0 +1,20 @@
+{
+  "name": "mean-users",
+  "description": "A MEAN stack user login template",
+  "main": "index.js",
+  "authors": [
+    "stevebrush <steve.brush@blackbaud.com>"
+  ],
+  "license": "ISC",
+  "homepage": "https://github.com/Blackbaud-SteveBrush/mean-users",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "checklist-model": "^0.10.0"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "preset": "crockford",
+  "disallowDanglingUnderscores": false,
+  "disallowTrailingWhitespace": false,
+  "excludeFiles": [
+    "./!(public|server|bin)",
+    "./public/app/libs/**"
+  ]
+}

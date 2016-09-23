@@ -1,0 +1,6 @@
+tmp/**/*.js
+build/**/*.js
+.sass-cache/**/*.js
+node_modules/**/*.js
+bower_components/**/*.js
+coverage/**/*.js

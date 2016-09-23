@@ -1,0 +1,11 @@
+{
+  "browser": true,
+  "curly": true,
+  "devel": ["alert", "console"],
+  "eqeqeq": true,
+  "esversion": 6,
+  "forin": true,
+  "predef": ["$", "angular", "window"],
+  "undef": true,
+  "unused": true
+}

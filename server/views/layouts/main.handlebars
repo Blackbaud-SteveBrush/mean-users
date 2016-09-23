@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="https://sky.blackbaudcdn.net/skyux/1.6.10/css/sky-bundle.css">
+    <link rel="stylesheet" href="/css/app.min.css">
+  </head>
+  <body ng-app="mean-users" ng-cloak>
+    <div class="page" ng-controller="AppController as appCtrl">
+      <bb-omnibar></bb-omnibar>
+      <header id="header">
+        <bb-navbar class="navbar navbar-inverse bb-navbar">
+          <div class="container">
+            <ul class="nav navbar-nav navbar-right">
+              {{#unless user}}
+              <li>
+                <a href ui-sref="login">Log in</a>
+              </li>
+              <li>
+                <a href ui-sref="register">Register</a>
+              </li>
+              {{/unless}}
+              {{#if user}}
+              <li>
+                <a href ui-sref="profile">{{ user.emailAddress }}</a>
+              </li>
+              <li>
+                <a href ui-sref="admin.users">Users</a>
+              </li>
+              <li>
+                <a href ui-sref="admin.roles">Roles</a>
+              </li>
+              <li>
+                <a href ui-sref="admin.permissions">Permissions</a>
+              </li>
+              <li>
+                <a href ui-sref="logout">Log out</a>
+              </li>
+              {{/if}}
+            </ul>
+            <ul class="nav navbar-nav navbar-left">
+              <li>
+                <a href="/">Home</a>
+              </li>
+            </ul>
+          </div>
+        </bb-navbar>
+      </header>
+      <div id="content">
+        <div class="container">
+          <ui-view></ui-view>
+        </div>
+      </div>
+    </div>
+    <script src="https://sky.blackbaudcdn.net/skyux/1.6.10/js/sky-bundle.min.js"></script>
+    <script src="/js/app.js"></script>
+  </body>
+</html>
