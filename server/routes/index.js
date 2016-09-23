@@ -95,7 +95,6 @@ router.route('/api/permissions')
       res.json(permission);
     });
   });
-
 router.route('/api/permissions/:id')
   .delete(function (req, res) {
     Permission.findOneAndRemove({
@@ -174,5 +173,51 @@ router.route('/api/roles/:id')
       });
     });
   });
+
+router.route('/api/users')
+    .get(function (req, res) {
+        User.find({}).exec().then(function (data) {
+            res.json({
+                value: data
+            });
+        });
+    })
+    .post(function (req, res) {
+        var permission;
+        permission = new Permission(req.body);
+        permission.save().then(function () {
+            res.json(permission);
+        });
+    });
+router.route('/api/users/:id')
+    .delete(function (req, res) {
+        User.findOneAndRemove({
+            _id: req.params.id
+        }).exec().then(function () {
+            res.json({});
+        });
+    })
+    .get(function (req, res) {
+        User.findOne({
+            _id: req.params.id
+        }).exec().then(function (data) {
+            res.json(data);
+        });
+    })
+    .put(function (req, res) {
+        User.findOne({
+            _id: req.params.id
+        }).exec().then(function (data) {
+            var k;
+            for (k in req.body) {
+                if (req.body.hasOwnProperty(k)) {
+                    data[k] = req.body[k];
+                }
+            }
+            data.save().then(function () {
+                res.json(data);
+            });
+        });
+    });
 
 module.exports = router;

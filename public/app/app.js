@@ -50,7 +50,7 @@
       .state('admin.users', {
         url: '/users',
         templateUrl: '../public/app/views/admin/users.html',
-        controller: 'AdminUsersController as usersCtrl'
+        controller: 'UsersController as usersCtrl'
       })
       .state('admin.roles', {
         url: '/roles',

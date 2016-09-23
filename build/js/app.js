@@ -220,7 +220,7 @@ angular.module('checklist-model', [])
       .state('admin.users', {
         url: '/users',
         templateUrl: '../public/app/views/admin/users.html',
-        controller: 'AdminUsersController as usersCtrl'
+        controller: 'UsersController as usersCtrl'
       })
       .state('admin.roles', {
         url: '/roles',
@@ -443,6 +443,54 @@ angular.module('checklist-model', [])
 }(window.angular));
 
 (function (angular) {
+    'use strict';
+
+    function UserService($http) {
+        var service;
+
+        service = this;
+
+        service.create = function (data) {
+            return $http.post('/api/users', data).then(function (res) {
+                return res.data;
+            });
+        };
+
+        service.deleteById = function (id) {
+            return $http.delete('/api/users/' + id).then(function (res) {
+                return res.data;
+            });
+        };
+
+        service.getAll = function () {
+            return $http.get('/api/users').then(function (res) {
+                return res.data;
+            });
+        };
+
+        service.getById = function (id) {
+            return $http.get('/api/users/' + id).then(function (res) {
+                return res.data;
+            });
+        };
+
+        service.updateById = function (id, data) {
+            return $http.put('/api/users/' + id, data).then(function (res) {
+                return res.data;
+            });
+        };
+    }
+
+    UserService.$inject = [
+        '$http'
+    ];
+
+    angular.module('mean-users')
+        .service('UserService', UserService);
+
+}(window.angular));
+
+(function (angular) {
   'use strict';
 
   function PermissionsController(PermissionService) {
@@ -540,10 +588,43 @@ angular.module('checklist-model', [])
 (function (angular) {
   'use strict';
 
-  function AdminUsersController() {}
+  function UsersController(UserService) {
+        var vm;
 
-  angular.module('mean-users')
-    .controller('AdminUsersController', AdminUsersController);
+        vm = this;
+
+        vm.sortType = 'emailAddress';
+        vm.reverseSort = false;
+
+        vm.sortBy = function (propertyName) {
+            if (vm.sortType === propertyName) {
+                vm.toggleReverse();
+            }
+            vm.sortType = propertyName;
+        };
+
+        vm.toggleReverse = function () {
+            if (vm.reverseSort) {
+                vm.reverseSort = false;
+            } else {
+                vm.reverseSort = true;
+            }
+        };
+
+        UserService
+            .getAll()
+            .then(function (data) {
+                vm.users = data.value;
+                vm.isReady = true;
+            });
+    }
+
+    UsersController.$inject = [
+        'UserService'
+    ];
+
+    angular.module('mean-users')
+        .controller('UsersController', UsersController);
 }(window.angular));
 
 (function (angular) {
@@ -630,11 +711,11 @@ angular.module('checklist-model', [])
 
 angular.module('mean-users.templates', []).run(['$templateCache', function($templateCache) {
     $templateCache.put('../public/app/views/admin/permissions.html',
-        '<h1>Permissions</h1><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=permissionsCtrl.submit()><div class=form-group><input class=form-control id=field-permission placeholder=MY_PERMISSION ng-model=permissionsCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td></tr><tr ng-repeat="permission in permissionsCtrl.permissions"><td><form ng-if=permission.showEditor ng-submit=permissionsCtrl.update(permission)><input ng-model=permission.name class=form-control> <button type=submit class="btn btn-default btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="role.showEditor=false">Cancel</button></form><span ng-if=!permission.showEditor ng-click="permission.showEditor=true" ng-bind=permission.name></span></td><td ng-bind=permission._id></td><td><button class="btn btn-xs btn-default" ng-click=permissionsCtrl.delete($index)>Delete</button></td></tr></table>');
+        '<h1>Permissions</h1><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=permissionsCtrl.submit()><div class=form-group><input class=form-control id=field-permission placeholder=MY_PERMISSION ng-model=permissionsCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td></tr><tr><th>Name</th><th>ID</th><th></th></tr><tr ng-repeat="permission in permissionsCtrl.permissions"><td><form ng-if=permission.showEditor ng-submit=permissionsCtrl.update(permission)><div class=form-group><input ng-model=permission.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="permission.showEditor=false">Cancel</button></form><span ng-if=!permission.showEditor ng-click="permission.showEditor=true" ng-bind=permission.name></span></td><td ng-bind=permission._id></td><td><button class="btn btn-xs btn-default" ng-click=permissionsCtrl.delete($index)>Delete</button></td></tr></table>');
     $templateCache.put('../public/app/views/admin/roles.html',
         '<h1>Roles</h1><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=rolesCtrl.submit()><div class=form-group><input class=form-control id=field-role placeholder="e.g. admin" ng-model=rolesCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td></tr><tr><th>Name</th><th>Permissions</th><th></th></tr><tr ng-repeat="role in rolesCtrl.roles"><td><form ng-if=role.showEditor ng-submit=rolesCtrl.update(role)><div class=form-group><input ng-model=role.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="role.showEditor=false">Cancel</button></form><span ng-if=!role.showEditor ng-click="role.showEditor=true" ng-bind=role.name></span></td><td><form ng-submit=rolesCtrl.update(role)><div class=checkbox ng-repeat="permission in rolesCtrl.permissions"><label><input type=checkbox ng-checked="role.permissions.indexOf(permission._id) > -1" ng-click=rolesCtrl.toggleSelection(permission._id)><span ng-bind=permission.name></span></label></div><div class=form-group><button type=submit class="btn btn-xs btn-default">Update</button></div></form></td><td><button class="btn btn-xs btn-default" ng-click=rolesCtrl.delete($index)>Delete</button></td></tr></table>');
     $templateCache.put('../public/app/views/admin/users.html',
-        'Users');
+        '<h1>Users</h1><div class=table-responsive><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=usersCtrl.submit()><div class=form-group><input type=email class=form-control placeholder="Email address" ng-model=usersCtrl.formData.emailAddress></div><div class=form-group><select class=form-control><option value="">-- Role --</option></select></div><button type=submit class="btn btn-default">Create</button></form></td><td></td><td></td></tr><tr><th class=form-sort-tab ng-click="usersCtrl.sortBy(\'emailAddress\')" ng-class="{\'active\':usersCtrl.sortType === \'emailAddress\'}">Email Address <span class=carrots ng-if="usersCtrl.sortType === \'emailAddress\'"><i class="fa fa-caret-up fa-3" ng-if=!usersCtrl.reverseSort aria-hidden=true></i> <i class="fa fa-caret-down fa-4" ng-if=usersCtrl.reverseSort aria-hidden=true></i></span></th><th class=form-sort-tab ng-click="usersCtrl.sortBy(\'role\')" ng-class="{\'active\':usersCtrl.sortType === \'role\'}">Role <span class=carrots ng-if="usersCtrl.sortType === \'role\'"><i class="fa fa-caret-up fa-5" ng-if=!usersCtrl.reverseSort aria-hidden=true></i> <i class="fa fa-caret-down fa-6" ng-if=usersCtrl.reverseSort aria-hidden=true></i></span></th><th></th></tr><tr ng-repeat="user in usersCtrl.users | orderBy:usersCtrl.sortType:usersCtrl.reverseSort"><td><span ng-bind=::user.emailAddress></span></td><td><span ng-bind=::user.roleId></span></td><td><a ui-sref="user-form({ id: user._id })" class="btn btn-default"><i class="fa fa-pencil"></i> Edit</a></td></tr></table></div>');
     $templateCache.put('../public/app/views/home.html',
         'Home');
     $templateCache.put('../public/app/views/login.html',

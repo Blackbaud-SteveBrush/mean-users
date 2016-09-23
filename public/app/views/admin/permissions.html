@@ -10,13 +10,25 @@
       </form>
     </td>
     <td></td>
+    <td></td>
+  </tr>
+  <tr>
+    <th>
+      Name
+    </th>
+    <th>
+      ID
+    </th>
+    <th></th>
   </tr>
   <tr ng-repeat="permission in permissionsCtrl.permissions">
     <td>
       <form ng-if="permission.showEditor" ng-submit="permissionsCtrl.update(permission)">
-        <input ng-model="permission.name" class="form-control">
-        <button type="submit" class="btn btn-default btn-xs">Update</button>
-        <button type="button" class="btn btn-default btn-xs" ng-click="role.showEditor=false">Cancel</button>
+        <div class="form-group">
+          <input ng-model="permission.name" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-primary btn-xs">Update</button>
+        <button type="button" class="btn btn-default btn-xs" ng-click="permission.showEditor=false">Cancel</button>
       </form>
       <span ng-if="!permission.showEditor" ng-click="permission.showEditor=true" ng-bind="permission.name"></span>
     </td>

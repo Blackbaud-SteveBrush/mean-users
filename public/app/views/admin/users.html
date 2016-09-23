@@ -1,1 +1,53 @@
-Users
+<h1>Users</h1>
+<div class="table-responsive">
+  <table class="table table-striped">
+    <tr>
+      <td>
+        <form class="form form-inline" ng-submit="usersCtrl.submit()">
+          <div class="form-group">
+            <input type="email" class="form-control" placeholder="Email address" ng-model="usersCtrl.formData.emailAddress">
+          </div>
+          <div class="form-group">
+            <select class="form-control">
+              <option value="">-- Role --</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-default">Create</button>
+        </form>
+      </td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <th class="form-sort-tab" ng-click="usersCtrl.sortBy('emailAddress')" ng-class="{'active':usersCtrl.sortType === 'emailAddress'}">
+        Email Address
+        <span class="carrots" ng-if="usersCtrl.sortType === 'emailAddress'">
+          <i class="fa fa-caret-up fa-3" ng-if="!usersCtrl.reverseSort" aria-hidden="true"></i>
+          <i class="fa fa-caret-down fa-4" ng-if="usersCtrl.reverseSort" aria-hidden="true"></i>
+        </span>
+      </th>
+      <th class="form-sort-tab" ng-click="usersCtrl.sortBy('role')" ng-class="{'active':usersCtrl.sortType === 'role'}">
+        Role
+        <span class="carrots" ng-if="usersCtrl.sortType === 'role'">
+          <i class="fa fa-caret-up fa-5"  ng-if="!usersCtrl.reverseSort" aria-hidden="true"></i>
+          <i class="fa fa-caret-down fa-6"  ng-if="usersCtrl.reverseSort" aria-hidden="true"></i>
+        </span>
+      </th>
+      <th>
+      </th>
+    </tr>
+    <tr ng-repeat="user in usersCtrl.users | orderBy:usersCtrl.sortType:usersCtrl.reverseSort">
+      <td>
+        <span ng-bind="::user.emailAddress"></span>
+      </td>
+      <td>
+        <span ng-bind="::user.roleId"></span>
+      </td>
+      <td>
+        <a ui-sref="user-form({ id: user._id })" class="btn btn-default">
+          <i class="fa fa-pencil"></i> Edit
+        </a>
+      </td>
+    </tr>
+  </table>
+</div>
