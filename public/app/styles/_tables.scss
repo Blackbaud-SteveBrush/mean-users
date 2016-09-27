@@ -1,0 +1,127 @@
+.table-list {
+    margin: 0 0 40px;
+    padding: 0;
+    list-style: none;
+
+    .table-list-item {
+        margin: 0 0 20px;
+        transition: all 200ms;
+        position: relative;
+
+        .table-list-heading {
+            position: relative;
+
+            .table-list-title {
+                display: inline-block;
+                margin-right: 6px;
+            }
+            .handle {
+                right: 0;
+                top: 18px;
+                position: absolute;
+            }
+            .controls {
+                display: inline-block;
+                > * {
+                    margin-left: 5px;
+                }
+            }
+        }
+
+        &.sortable-chosen {
+            .table-list-title {
+                margin-top: 0;
+            }
+            .table {
+                margin: 0;
+            }
+            .handle {
+                top: 0;
+            }
+        }
+    }
+}
+
+.table {
+    background-color: #fff;
+
+    > tbody {
+        > tr {
+            > td {
+            }
+            > th {
+              border-bottom: 1px dotted #ccc;
+              border-top: 0;
+              width: 1%;
+              white-space: nowrap;
+            }
+
+            &.sortable-chosen > td {
+                position: relative;
+                background-color: #fff;
+            }
+        }
+    }
+
+    thead th:first-child,
+    thead th:last-child {
+        border-radius: 0;
+    }
+
+    td,
+    th {
+        width: auto;
+    }
+
+    .media {
+        color: #292a2b;
+        display: block;
+
+        .media-left {
+            padding-right: 6px;
+
+            .fa {
+                font-size: 16px;
+                line-height: 1.42857;
+                vertical-align: top;
+            }
+        }
+    }
+
+    .controls {
+        width: 1%;
+
+        > * {
+            vertical-align: top;
+        }
+    }
+
+    .name {
+        width: auto;
+        white-space: normal;
+
+        h4 {
+            font-size: 14px;
+            margin: 0;
+            line-height: 1.42857;
+        }
+
+        .nicknames {
+            color: #888;
+        }
+    }
+
+    .stats {
+        width: 55%;
+    }
+}
+
+.form-sort-tab {
+    cursor: pointer;
+
+    i {
+       font-size: 18px;
+       float: right;
+       color: #000;
+    }
+}

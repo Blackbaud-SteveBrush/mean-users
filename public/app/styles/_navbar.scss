@@ -1,0 +1,18 @@
+.navbar {
+  border-bottom: 0;
+
+  .navbar-brand {
+    color: #fff;
+
+    &:hover {
+      color: #fff;
+    }
+  }
+}
+
+.dropdown-menu {
+
+    .divider {
+        background-color: #a7b1c2;
+    }
+}

@@ -3,6 +3,6 @@
 
   function HomeController() {}
 
-  angular.module('mean-users')
+  angular.module('capabilities-catalog')
     .controller('HomeController', HomeController);
 }(window.angular));

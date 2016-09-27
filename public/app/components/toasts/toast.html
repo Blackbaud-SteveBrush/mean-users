@@ -1,0 +1,6 @@
+<div class="toast-container">
+  <div class="toast-message"><i ng-if="::toastCtrl.icon" class="fa fa-fw {{:: toastCtrl.icon }} toast-icon"></i>{{:: toastCtrl.messageText }}</div>
+  <div ng-if="::toastCtrl.linkText" class="toast-controls">
+    <a class="btn btn-default toast-link" href ng-click="toastCtrl.action()">{{:: toastCtrl.linkText }}</a>
+  </div>
+</div>

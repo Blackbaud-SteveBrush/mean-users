@@ -1,0 +1,52 @@
+<div class="section section-warning" id="section-services">
+  <div class="container">
+    <header>
+      <h2>Services</h2>
+      <p class="controls" ng-if="::listCtrl.isAuthorized('CREATE_CAPABILITY_GROUP')">
+        <a class="btn btn-default btn-sm" href ui-sref="capability-group-form"><i class="fa fa-plus"></i>Add Service Group</a></span>
+      </p>
+    </header>
+    <div class="section-body" ng-repeat="capabilityGroup in items track by capabilityGroup._id" ng-if="capabilityGroup.value.length || (listCtrl.isAuthorized('CREATE_PRODUCT') && !hideHeadings)">
+      <header>
+        <h3 ng-bind="::capabilityGroup.name"></h3>
+        <p class="controls" ng-if="::listCtrl.isAuthorized('CREATE_CAPABILITY')">
+          <a class="btn btn-default btn-sm" href ng-if="::listCtrl.isAuthorized('EDIT_CAPABILITY_GROUP') && capabilityGroup._id" ui-sref="capability-group-form(::{ groupId: capabilityGroup._id })"><i class="fa fa-pencil"></i>Edit Group</a>
+          <a class="btn btn-default btn-sm" href ui-sref="capability-form({ groupId: capabilityGroup._id })">
+            <i class="fa fa-plus"></i>Add Service
+          </a>
+        </p>
+      </header>
+      <ul class="meter-list row" ng-sortable="capabilityGroup.sortConfig">
+        <li class="meter-list-item col-lg-4 col-md-6 col-sm-6" ng-class="::{ draggable: listCtrl.isDraggable }" ng-repeat="capability in capabilityGroup.value track by capability._id">
+          <div class="featurette">
+            <a class="featurette-body" href ui-sref="capability(::{ capabilitySlug: capability.slug })">
+              <div class="media">
+                <div class="media-left">
+                  <i class="media-object fa fa-fw {{::capability.icon}}"></i>
+                </div>
+                <div class="media-body">
+                  <h4 class="featurette-title">
+                    <span ng-bind="::capability.shortname"></span>
+                    <span ng-if="capability.nicknames.length" class="featurette-subtitle element-list">(<span class="element-list-item" ng-repeat="nickname in ::capability.nicknames track by $index" ng-bind="::nickname"></span>)</span>
+                  </h4>
+                  <span class="stats">
+                    <span class="stat" ng-bind="::capability.developmentState"></span>
+                    <span class="stat" ng-bind="::capability.capabilityType"></span>
+                    <span class="stat" ng-bind="::capability.adopters.length + '&nbsp;adopters'"></span>
+                    <span ng-if="capability.lastUpdated" class="stat" ng-bind="::capability.lastUpdated.formatted.friendly"></span>
+                  </span>
+                  <div class="controls" ng-if="::listCtrl.isAuthorized('EDIT_CAPABILITY:PARTIAL')">
+                    <button class="btn btn-xs btn-link" ng-click="listCtrl.goto('capability-form', { capabilityId: capability._id }, $event)"><i class="fa fa-pencil"></i></button>
+                  </div>
+                </div>
+              </div>
+            </a>
+            <div class="featurette-footer">
+              <cc-chart model="capability.adopters" totals="capability.totals" data-title="::capability.name + ' Adopters'"></cc-chart>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>

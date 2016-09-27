@@ -1,0 +1,24 @@
+#footer {
+    padding: 40px 0;
+
+    ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+
+        > li {
+            > a {
+
+            }
+        }
+    }
+
+    div {
+        color: #888;
+        font-size: 1em;
+    }
+
+    .last-updated {
+      text-align: right;
+    }
+}

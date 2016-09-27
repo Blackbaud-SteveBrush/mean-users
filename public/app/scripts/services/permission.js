@@ -29,6 +29,6 @@
   PermissionService.$inject = [
     '$http'
   ];
-  angular.module('mean-users')
+  angular.module('capabilities-catalog')
     .service('PermissionService', PermissionService);
 }(window.angular));

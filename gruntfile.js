@@ -19,14 +19,56 @@ module.exports = function (grunt) {
             app: {
                 files: {
                     '<%= buildPath %>/js/app.js': [
-                        'bower_components/checklist-model/checklist-model.js',
-                        'public/**/*.js',
+                        'bower_components/sortable/Sortable.js',
+                        'bower_components/sortable/ng-sortable.js',
+                        'bower_components/jquery-hotkeys/jquery.hotkeys.js',
+                        'bower_components/marked/lib/marked.js',
+                        'bower_components/to-markdown/dist/to-markdown.js',
+                        'bower_components/bootstrap-markdown/js/bootstrap-markdown.js',
+                        'bower_components/angular-sanitize/angular-sanitize.js',
+                        'bower_components/angular-local-storage/dist/angular-local-storage.min.js',
+                        'public/app/app.js',
+                        'public/app/scripts/**/*.js',
+                        'public/app/components/**/*.js',
+                        'public/app/views/**/*.js',
                         'tmp/templates.js'
                     ]
                 }
             }
         },
         copy: {
+            libs: {
+                files: [{
+                    expand: true,
+                    cwd: 'public/app/libs/',
+                    src: ['**/*'],
+                    dest: '<%= buildPath %>/libs/'
+                }]
+            },
+            fonts: {
+                files: [{
+                    expand: true,
+                    cwd: 'public/app/fonts/',
+                    src: ['*'],
+                    dest: '<%= buildPath %>/fonts/'
+                }]
+            },
+            data: {
+                files: [{
+                    expand: true,
+                    cwd: 'public/app/data/',
+                    src: ['**/*.json'],
+                    dest: '<%= buildPath %>/data/'
+                }]
+            },
+            html: {
+                files: [{
+                    expand: true,
+                    cwd: 'public/app/',
+                    src: ['index.html'],
+                    dest: '<%= buildPath %>'
+                }]
+            },
             images: {
                 files: [{
                     expand: true,
@@ -39,7 +81,7 @@ module.exports = function (grunt) {
         html2js: {
             app: {
                 options: {
-                    module: 'mean-users.templates',
+                    module: 'capabilities-catalog.templates',
                     quoteChar: '\'',
                     indentString: '    ',
                     singleModule: true,
@@ -54,7 +96,7 @@ module.exports = function (grunt) {
                         removeStyleLinkTypeAttributes: true
                     }
                 },
-                src: ['public/app/**/*.html'],
+                src: ['public/app/views/**/*.html', 'public/app/components/**/*.html'],
                 dest: 'tmp/templates.js'
             }
         },
@@ -76,6 +118,7 @@ module.exports = function (grunt) {
             combine: {
                 files: {
                     '<%= buildPath %>/css/app.min.css': [
+                        'bower_components/bootstrap-markdown/css/bootstrap-markdown.min.css',
                         '<%= buildPath %>/css/app.min.css'
                     ]
                 }
@@ -103,8 +146,12 @@ module.exports = function (grunt) {
                 files: ['public/app/**/*.js'],
                 tasks: ['concat_sourcemap:app', 'uglify:scripts']
             },
-            html: {
-                files: ['public/app/**/*.html'],
+            templates: {
+                files: ['public/app/components/**/*.html'],
+                tasks: ['html2js', 'concat_sourcemap:app', 'uglify:scripts']
+            },
+            views: {
+                files: ['public/app/views/**/*.html'],
                 tasks: ['html2js', 'concat_sourcemap:app', 'uglify:scripts']
             }
         }

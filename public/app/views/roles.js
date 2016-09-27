@@ -50,6 +50,6 @@
     'PermissionService',
     'RoleService'
   ];
-  angular.module('mean-users')
+  angular.module('capabilities-catalog')
     .controller('RolesController', RolesController);
 }(window.angular));

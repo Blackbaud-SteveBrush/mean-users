@@ -1,7 +1,7 @@
 (function (angular) {
   'use strict';
 
-  function UsersController(UserService) {
+  function UsersController(MessageService, UserService) {
         var vm;
 
         vm = this;
@@ -29,13 +29,14 @@
             .then(function (data) {
                 vm.users = data.value;
                 vm.isReady = true;
-            });
+            }).catch(MessageService.handleError);
     }
 
     UsersController.$inject = [
+        'MessageService',
         'UserService'
     ];
 
-    angular.module('mean-users')
+    angular.module('capabilities-catalog')
         .controller('UsersController', UsersController);
 }(window.angular));

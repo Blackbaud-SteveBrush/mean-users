@@ -41,7 +41,7 @@
         '$http'
     ];
 
-    angular.module('mean-users')
+    angular.module('capabilities-catalog')
         .service('UserService', UserService);
 
 }(window.angular));

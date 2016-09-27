@@ -2,23 +2,6 @@
 <div class="table-responsive">
   <table class="table table-striped">
     <tr>
-      <td>
-        <form class="form form-inline" ng-submit="usersCtrl.submit()">
-          <div class="form-group">
-            <input type="email" class="form-control" placeholder="Email address" ng-model="usersCtrl.formData.emailAddress">
-          </div>
-          <div class="form-group">
-            <select class="form-control">
-              <option value="">-- Role --</option>
-            </select>
-          </div>
-          <button type="submit" class="btn btn-default">Create</button>
-        </form>
-      </td>
-      <td></td>
-      <td></td>
-    </tr>
-    <tr>
       <th class="form-sort-tab" ng-click="usersCtrl.sortBy('emailAddress')" ng-class="{'active':usersCtrl.sortType === 'emailAddress'}">
         Email Address
         <span class="carrots" ng-if="usersCtrl.sortType === 'emailAddress'">
@@ -34,6 +17,9 @@
         </span>
       </th>
       <th>
+
+      </th>
+      <th>
       </th>
     </tr>
     <tr ng-repeat="user in usersCtrl.users | orderBy:usersCtrl.sortType:usersCtrl.reverseSort">
@@ -41,10 +27,11 @@
         <span ng-bind="::user.emailAddress"></span>
       </td>
       <td>
-        <span ng-bind="::user.roleId"></span>
+        <span ng-bind="::user.role"></span>
       </td>
+      <td><pre>{{:: user | json }}</pre></td>
       <td>
-        <a ui-sref="user-form({ id: user._id })" class="btn btn-default">
+        <a ui-sref="admin.user-form({ id: user._id })" class="btn btn-default">
           <i class="fa fa-pencil"></i> Edit
         </a>
       </td>

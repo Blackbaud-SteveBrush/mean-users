@@ -1,0 +1,125 @@
+.featurette {
+    background-color: #fff;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.25);
+    position: relative;
+    height: 95px;
+
+    &:hover {
+        > .featurette-body {
+            padding: 20px 20px 30px;
+
+            .featurette-subtitle {
+                opacity: 1;
+            }
+        }
+        > .featurette-footer {
+            height: 25px;
+            margin-top: -20px;
+            opacity: 1;
+        }
+    }
+
+    > .featurette-body {
+        color: #292a2b;
+        padding: 25px;
+        display: block;
+        transition: padding 150ms;
+
+        .featurette-title {
+            font-size: 16px;
+            margin: 0 7px 0 0;
+            display: block;
+            width: 100%;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+            line-height: 1.4;
+        }
+
+        .featurette-subtitle {
+            color: #888;
+            font-size: 15px;
+            font-weight: 100;
+            opacity: 0;
+            transition: opacity 150ms;
+        }
+    }
+
+    .media {
+        .media-left {
+            vertical-align: top;
+            padding-right: 5px;
+
+        }
+        .media-object {
+            font-size: 21px;
+        }
+    }
+
+    .stats {
+        display: block;
+        font-weight: 100;
+        margin-top: 0;
+        color: #888;
+        width: 100%;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+
+        .stat {}
+        .stat + .stat {
+            &:before {
+                content: " · ";
+            }
+        }
+    }
+
+    .updated {
+        display: block;
+        font-weight: 100;
+        margin-top: 0;
+        color: #888;
+        width: 100%;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+
+        .updatedAt {
+          &:before {
+              content: "Updated: ";
+          }
+        }
+    }
+
+    .controls {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        opacity: 0;
+
+        .btn-link {
+            .fa {
+                margin: 0;
+            }
+        }
+    }
+
+    &:hover .controls {
+        opacity: 1;
+    }
+
+    > .featurette-footer {
+        background-color: #f4f4f4;
+        box-shadow: 0 2px 0px rgba(0,0,0,0.03) inset;
+        height: 5px;
+        opacity: .65;
+        transition: height 150ms, margin 150ms, opacity 150ms;
+        position: relative;
+        margin-top: 0;
+        cursor: pointer;
+
+        &:hover {
+            background-color: #f9f9f9;
+        }
+    }
+}

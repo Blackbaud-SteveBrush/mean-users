@@ -1,0 +1,54 @@
+<div class="section section-info capabilities-catalog" id="section-products">
+  <div class="container">
+    <header>
+      <h2>Products</h2>
+      <p class="controls" ng-if="::appCtrl.isAuthorized('CREATE_PRODUCT_GROUP')">
+        <a class="btn btn-default" href ui-sref="product-group-form"><i class="fa fa-plus"></i>Add Product Group</a></span>
+      </p>
+    </header>
+    <ul class="table-list capability-list">
+      <li class="table-list-item" ng-repeat="productGroup in ::listCtrl.products track by productGroup._id" ng-if="::productGroup.products.length || appCtrl.isAuthorized('CREATE_PRODUCT')">
+        <div class="table-list-heading">
+          <h3 ng-bind="::productGroup.name"></h3>
+          <p class="controls" ng-if="::appCtrl.isAuthorized('CREATE_PRODUCT')">
+            <a class="btn btn-default btn-sm" href ui-sref="product-group-form(::{ groupId: productGroup._id })" ng-if="::appCtrl.isAuthorized('EDIT_PRODUCT_GROUP') && productGroup._id"><i class="fa fa-pencil"></i>Edit Group</a>
+            <a class="btn btn-default btn-sm" href ui-sref="product-form({ groupId: productGroup._id })"><i class="fa fa-plus"></i>Add Product</a></span>
+          </p>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th class="name">
+                  Product
+                </th>
+                <th class="stats">
+                  Capabilities Adopted and Status
+                </th>
+                <th ng-if="::appCtrl.isAuthorized('EDIT_PRODUCT:PARTIAL')">
+                </th>
+              </tr>
+            </thead>
+            <tbody ng-sortable="productGroup.sortConfig">
+              <tr ng-class="::{ draggable: appCtrl.isAuthorized('EDIT_PRODUCT:FULL') }" ng-repeat="product in productGroup.products track by product._id">
+                <td class="name">
+                  <h4 ng-bind="::product.name"></h4>
+                </td>
+                <td class="stats">
+                  <cc-chart model="product.capabilities" totals="product.totals" data-title="::'Services Adopted by ' + product.name"></cc-chart>
+                </td>
+                <td class="controls" ng-if="::appCtrl.isAuthorized('EDIT_PRODUCT:PARTIAL')">
+                  <bb-context-menu>
+                    <li>
+                      <a href ui-sref="product-form(::{ productId: product._id })"><i class="fa fa-pencil"></i> Edit</a>
+                    </li>
+                  </bb-context-menu>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>

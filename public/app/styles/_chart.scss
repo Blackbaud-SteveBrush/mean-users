@@ -1,0 +1,62 @@
+
+.chart {
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+
+    .meter {
+        width: 100%;
+        max-width: 100% !important;
+        position: relative;
+        display: table-cell;
+        height: 100%;
+        position: absolute;
+
+        &:after,
+        &:before {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        .bar {
+            display: block;
+            float: left;
+            height: 100%;
+            min-height: 100%;
+            margin-top: 0;
+            position: relative;
+            opacity: .55;
+            transition: min-height 150ms, margin 150ms;
+
+            &:hover {
+                opacity: 1;
+                border-color: #fff;
+                margin-top: -4px;
+                min-height: 140%;
+            }
+
+            > a {
+                display: block;
+                width: 100%;
+                height: 100%;
+            }
+        }
+    }
+}
+
+.table {
+    .meter {
+        height: 21px;
+        position: static;
+
+        > .bar {
+
+            &:hover {
+                border-color: transparent;
+                min-height: 130%;
+                margin-top: -3px;
+            }
+        }
+    }
+}

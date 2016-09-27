@@ -1,0 +1,9 @@
+.element-list {
+    .element-list-item {
+    }
+    .element-list-item + .element-list-item {
+        &:before {
+            content: ", ";
+        }
+    }
+}

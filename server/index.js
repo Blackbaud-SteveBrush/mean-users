@@ -2,6 +2,7 @@ var app,
     bodyParser,
     cookieParser,
     environment,
+    errorHandler,
     express,
     favicon,
     Handlebars,
@@ -27,7 +28,8 @@ mongoose = require('mongoose');
 session = require('express-session');
 logger = require('morgan');
 http = require('http');
-routes = require(__dirname + '/routes');
+routes = require(__dirname + '/middleware/routes');
+errorHandler = require(__dirname + '/middleware/error-handler');
 User = require(__dirname + '/database/models/user');
 port = process.env.PORT || '3000';
 environment = process.env.NODE_ENV || 'development';
@@ -55,6 +57,7 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 app.use('/', routes);
+app.use(errorHandler);
 
 passport.use(User.createStrategy());
 passport.serializeUser(User.serializeUser());
@@ -65,31 +68,9 @@ mongoose.connect('mongodb://localhost:27017/mean-users');
 
 // Catch 404 and forward to error handler
 app.use(function (req, res, next) {
-  var err = new Error('Not Found');
-  err.status = 404;
-  next(err);
-});
-
-// Development error handler
-// (will print stacktrace)
-if (environment === 'development') {
-  app.use(function (err, req, res) {
-    res.status(err.status || 500);
-    res.render('error', {
-      message: err.message,
-      error: err
-    });
-  });
-}
-
-// Production error handler
-// (no stacktraces leaked to user)
-app.use(function (err, req, res) {
-    res.status(err.status || 500);
-    res.render('error', {
-        message: err.message,
-        error: {}
-    });
+    var err = new Error('Not Found');
+    err.status = 404;
+    next(err);
 });
 
 app.set('port', port);

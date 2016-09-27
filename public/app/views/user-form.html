@@ -1,0 +1,55 @@
+<div bb-wait="userFormCtrl.waiting" class="container" ng-if="userFormCtrl.isReady">
+  <div class="page-header" bb-scroll-into-view="userFormCtrl.scrollToTop">
+    <h1 ng-if="userFormCtrl.formData._id">Edit {{ userFormCtrl.formData.emailAddress }}</h1>
+    <h1 ng-if="!userFormCtrl.formData._id">Administrator User Registration</h1>
+  </div>
+  <div ng-if="::userFormCtrl.isVisible" bb-scroll-into-view="userFormCtrl.scrollToTop">
+    <form name="register-form" id="form-login" class="form-horizontal" ng-submit="userFormCtrl.submit()" method="post" validate>
+      <div class="col-md-9 col-sm-10 form-group tab-pane">
+        <div class="form-group" ng-class="{'has-error': register-form.emailAddress.$touched && register-form.emailAddress.$invalid}">
+          <label class="col-md-3 col-sm-2 control-label">Email Address:</label>
+          <div class="col-md-9 col-sm-10">
+
+            <input
+              class="form-control"
+              autocomplete="off"
+              type="email"
+              name="registerEmailAddress"
+              ng-model="userFormCtrl.formData.emailAddress"
+              placeholder="(required)"
+              required>
+
+            <div ng-show="register-form.$error.email" class="help-block">
+              Valid email address is required.
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-md-3 col-sm-2 control-label">Role:</label>
+          <div class="col-md-9 col-sm-10">
+            <select class="form-control" name="roleModel" ng-model="userFormCtrl.formData.roleId" required>
+              <option value="" ng-selected="userFormCtrl.formData.roleId === role._id">
+                --- Select ---
+              </option>
+              <option ng-repeat="role in userFormCtrl.roles" value="{{ role._id }}">{{ role.name }}</option>
+            </select>
+            <div ng-show="register-form.roleModel.$error.required" class="help-block">
+              Valid user role selection required.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-2 form-group">
+        <button ng-if="userFormCtrl.formData._id" class="btn btn-primary btn-block" type="submit" ng-disabled="register-form.$invalid || userFormCtrl.waiting"><i class="fa fa-save"></i>Save</button>
+        <button ng-if="!userFormCtrl.formData._id" class="btn btn-primary btn-block" type="submit" ng-disabled="register-form.$invalid || userFormCtrl.waiting"><i class="fa fa-plus"></i>Create</button>
+        <button ng-if="::userFormCtrl.formData._id && appCtrl.isAuthorized('DELETE_ADOPTION_STATUS')" class="btn btn-danger btn-block" type="button" cc-confirm-click="Are you sure you want to DELETE {{userFormCtrl.formData.emailAddress}}" data-confirmed-click="userFormCtrl.delete()"><i class="fa fa-trash"></i>Delete</button>
+      </div>
+      <div class="col-md-3 col-sm-2 form-group">
+        <button ng-if="userFormCtrl.formData._id" class="btn btn-default btn-block" type="button" ng-click="userFormCtrl.requestReset()" ng-disabled="userFormCtrl.waiting" cc-confirm-click="Are you sure you want to request a passphrase reset for {{userFormCtrl.formData.emailAddress}}?"><i class="fa fa-refresh" aria-hidden="true"></i>Reset Passphrase</button>
+      </div>
+    </form>
+  </div>
+  <div ng-if="::!userFormCtrl.isVisible" class="alert alert-warning">
+    You are not authorized to view this page
+  </div>
+</div>

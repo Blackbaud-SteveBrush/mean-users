@@ -1,101 +1,116 @@
 (function (angular) {
-  'use strict';
+    'use strict';
 
-  function AuthService($http, $q) {
-    var isLoggedIn,
-        service,
-        user;
+    function AuthService($http, $q) {
+        var isLoggedIn,
+            service,
+            user;
 
-    isLoggedIn = false;
-    service = this;
-    user = null;
-
-    service.getUserStatus = function () {
-      var deferred;
-      deferred = $q.defer();
-      $http.get('/api/user-status').then(function (res) {
-        isLoggedIn = res.data.status;
-        user = res.data.user;
-        if (res.data.status === true) {
-          deferred.resolve();
-        } else {
-          deferred.reject();
-        }
-      }).catch(function () {
         isLoggedIn = false;
+        service = this;
         user = null;
-        deferred.reject();
-      });
-      return deferred.promise;
-    };
 
-    service.isLoggedIn = function () {
-      return isLoggedIn;
-    };
+        service.getUserStatus = function () {
+            var deferred;
 
-    service.isAuthorized = function (permission) {
-      console.log("isAuthorized:", user);
-      return true;
-    };
+            deferred = $q.defer();
 
-    service.isRole = function (role) {
-      var isAuthorized;
-      switch (role) {
-        case 'admin':
-        isAuthorized = true;
-        break;
-        case 'editor':
-        isAuthorized = service.isLoggedIn();
-        break;
-        default:
-        isAuthorized = true;
-        break;
-      }
-      return isAuthorized;
-    };
+            $http
+                .get('/api/user-status')
+                .then(function (res) {
+                    isLoggedIn = res.data.status;
+                    user = res.data.user;
+                    deferred.resolve({
+                        isLoggedIn: isLoggedIn
+                    });
+                })
+                .catch(function (res) {
+                    isLoggedIn = false;
+                    user = null;
+                    deferred.reject(res);
+                });
 
-    service.login = function (emailAddress, password) {
-      var deferred;
-      deferred = $q.defer();
-      $http.post('/api/login', {
-        emailAddress: emailAddress,
-        password: password
-      }).then(function (res) {
-        isLoggedIn = true;
-        deferred.resolve(res.data);
-      }).catch(function (res) {
-        isLoggedIn = false;
-        deferred.reject(res.data);
-      });
-      return deferred.promise;
-    };
+            return deferred.promise;
+        };
 
-    service.logout = function () {
-      console.log("LOGOUT!!!");
-      var deferred;
-      deferred = $q.defer();
-      $http
-        .get('/api/logout')
-        .then(function (res) {
-          isLoggedIn = false;
-          deferred.resolve(res.data);
-        })
-        .catch(function (res) {
-          isLoggedIn = true;
-          deferred.reject(res.data);
-        });
-      return deferred.promise;
-    };
+        service.isLoggedIn = function () {
+            return isLoggedIn;
+        };
 
-    service.register = function (data) {
-      return $http.post('/api/register', data).then(function (res) {
-        return res.data;
-      });
-    };
-  }
+        service.isAuthorized = function (permission) {
+            console.log("isAuthorized", permission, user.permissions);
+            if (permission === undefined) {
+                return true;
+            }
+            if (user === null) {
+                return false;
+            }
+            return (user.permissions.indexOf(permission) > -1);
+        };
 
-  AuthService.$inject = ['$http', '$q'];
+        service.isRole = function (role) {
+            console.log("isRole", role, user.role);
+            if (role === undefined) {
+                return true;
+            }
+            if (user === null) {
+                return false;
+            }
+            return user.role === role;
+        };
 
-  angular.module('mean-users')
+        service.login = function (emailAddress, password) {
+            var deferred;
+
+            deferred = $q.defer();
+
+            $http
+                .post('/api/login', {
+                    emailAddress: emailAddress,
+                    password: password
+                })
+                .then(function (res) {
+                    isLoggedIn = true;
+                    deferred.resolve(res.data);
+                })
+                .catch(function (res) {
+                    isLoggedIn = false;
+                    deferred.reject(res);
+                });
+
+            return deferred.promise;
+        };
+
+        service.logout = function () {
+            var deferred;
+
+            deferred = $q.defer();
+
+            $http
+                .get('/api/logout')
+                .then(function (res) {
+                    isLoggedIn = false;
+                    deferred.resolve(res.data);
+                })
+                .catch(function (res) {
+                    isLoggedIn = true;
+                    deferred.reject(res.data);
+                });
+
+            return deferred.promise;
+        };
+
+        service.register = function (data) {
+            return $http
+                .post('/api/register', data)
+                .then(function (res) {
+                    return res.data;
+                });
+        };
+    }
+
+    AuthService.$inject = ['$http', '$q'];
+
+    angular.module('capabilities-catalog')
     .service('AuthService', AuthService);
 }(window.angular));

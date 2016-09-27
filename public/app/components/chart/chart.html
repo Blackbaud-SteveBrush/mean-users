@@ -1,0 +1,6 @@
+<div class="chart" ng-if="::chartCtrl.model.length" ng-click="chartCtrl.openModal()">
+  <div class="meter" style="width:{{:: chartCtrl.model.length * 30 }}px;">
+    <div ng-repeat="total in ::chartCtrl.totals track by $index" class="bar {{:: total.class }}" style="width:{{:: total.percentage }}%;" tooltip-placement="top" tooltip-popup-delay="200" uib-tooltip="{{:: total.model.adoptionStatus.name }} · {{::total.count}} adopting">
+    </div>
+  </div>
+</div>

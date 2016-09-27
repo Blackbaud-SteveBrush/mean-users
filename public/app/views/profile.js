@@ -3,6 +3,6 @@
 
   function ProfileController() {}
 
-  angular.module('mean-users')
+  angular.module('capabilities-catalog')
     .controller('ProfileController', ProfileController);
 }(window.angular));

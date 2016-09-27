@@ -1,29 +1,35 @@
 (function (angular) {
-  'use strict';
+    'use strict';
 
-  function LoginController($state, $window, AuthService) {
-    var vm;
+    function LoginPageController($state, $window) {
+        var vm;
+        vm = this;
+        vm.redirect = function () {
+            var params,
+                state;
+            state = $state.previous.name;
+            params = $state.previous.params;
+            if (!state || state === 'login') {
+                state = 'home';
+                params = {};
+            }
+            $state.go(
+                state,
+                params,
+                {
+                    reload: true
+                }
+            );
+            $window.location.reload();
+        };
+    }
 
-    vm = this;
-    vm.formData = {};
+    LoginPageController.$inject = [
+        '$state',
+        '$window'
+    ];
 
-    this.submit = function () {
-      vm.disabled = true;
-      AuthService
-        .login(vm.formData.emailAddress, vm.formData.password)
-        .then(function () {
-          $state.go('home');
-          $window.location.reload();
-          vm.disabled = false;
-        })
-        .catch(function (err) {
-          alert("ERROR!", err);
-          vm.disabled = false;
-        });
-    };
-  }
+    angular.module('capabilities-catalog')
+        .controller('LoginPageController', LoginPageController);
 
-  LoginController.$inject = ['$state', '$window', 'AuthService'];
-  angular.module('mean-users')
-    .controller('LoginController', LoginController);
 }(window.angular));

@@ -1,0 +1,17 @@
+.tooltip.bottom .tooltip-arrow {
+    border-bottom-color: #000;
+    top: 0;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 0 5px 5px;
+}
+.tooltip-inner {
+    background-color: #000;
+    border: 0;
+    color: #fff;
+    padding: 4px 8px;
+    font-size: 12px;
+}
+.tooltip.bottom {
+    top: 150%;
+}

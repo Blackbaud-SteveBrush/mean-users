@@ -1,0 +1,20 @@
+.back-to-top {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    color: #FFF;
+    background: #1c84c6;
+    border-radius: 5px;
+    height: 30px;
+    width: 30px;
+    text-align: center;
+    font-size: 2em;
+    line-height: 1;
+    display: none;
+
+    &:hover,
+    &:focus {
+        background: #1a7bb9;
+        cursor: pointer;
+    }
+}

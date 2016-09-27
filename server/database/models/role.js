@@ -1,8 +1,6 @@
-var mongoose,
-    schema;
-
+var mongoose;
 mongoose = require('mongoose');
-schema = new mongoose.Schema({
+module.exports = mongoose.model('Role', new mongoose.Schema({
   name: {
     type: String,
     lowercase: true,
@@ -11,8 +9,7 @@ schema = new mongoose.Schema({
   },
   permissions: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Permission'
+    ref: 'Permission',
+    unique: true
   }]
-});
-
-module.exports = mongoose.model('Role', schema);
+}));

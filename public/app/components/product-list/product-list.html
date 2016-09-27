@@ -1,0 +1,40 @@
+<div class="section section-info capabilities-catalog" id="section-products">
+  <div class="container">
+    <header>
+      <h2>Products</h2>
+      <p class="controls" ng-if="::listCtrl.isAuthorized('CREATE_PRODUCT_GROUP')">
+        <a class="btn btn-default" href ui-sref="product-group-form"><i class="fa fa-plus"></i>Add Product Group</a></span>
+      </p>
+    </header>
+    <div class="section-body" ng-repeat="productGroup in items track by productGroup._id" ng-if="productGroup.value.length || (listCtrl.isAuthorized('CREATE_PRODUCT') && !hideHeadings)">
+      <header>
+        <h3 ng-bind="::productGroup.name"></h3>
+        <p class="controls" ng-if="::listCtrl.isAuthorized('CREATE_PRODUCT')">
+          <a class="btn btn-default btn-sm" href ui-sref="product-group-form(::{ groupId: productGroup._id })" ng-if="::listCtrl.isAuthorized('EDIT_PRODUCT_GROUP') && productGroup._id"><i class="fa fa-pencil"></i>Edit Group</a>
+          <a class="btn btn-default btn-sm" href ui-sref="product-form(::{ groupId: productGroup._id })"><i class="fa fa-plus"></i>Add Product</a></span>
+        </p>
+      </header>
+      <ul class="meter-list row" ng-sortable="productGroup.sortConfig">
+        <li class="meter-list-item col-sm-4" ng-class="::{ draggable: listCtrl.isAuthorized('EDIT_PRODUCT:FULL') }" ng-repeat="product in productGroup.value track by product._id">
+          <div class="featurette">
+            <a class="featurette-body" href ui-sref="product(::{ productSlug: product.slug })">
+              <h4 class="featurette-title">
+                <span ng-bind="::product.name"></span>
+              </h4>
+              <span class="stats">
+                <span class="stat" ng-bind="::product.adoptees.length + '&nbsp;services&nbsp;adopted'"></span>
+                <span ng-if="product.lastUpdated" class="stat" ng-bind="::product.lastUpdated.formatted.friendly"></span>
+              </span>
+              <div class="controls" ng-if="::listCtrl.isAuthorized('EDIT_PRODUCT:PARTIAL')">
+                <button class="btn btn-xs btn-link" ng-click="listCtrl.goto('product-form', { productId: product._id }, $event)"><i class="fa fa-pencil"></i></button>
+              </div>
+            </a>
+            <div class="featurette-footer">
+              <cc-chart model="product.adoptees" totals="product.totals" data-title="::'Services Adopted by ' + product.name"></cc-chart>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
