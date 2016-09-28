@@ -30,11 +30,11 @@
         <button type="submit" class="btn btn-primary btn-xs">Update</button>
         <button type="button" class="btn btn-default btn-xs" ng-click="permission.showEditor=false">Cancel</button>
       </form>
-      <span ng-if="!permission.showEditor" ng-click="permission.showEditor=true" ng-bind="permission.name"></span>
+      <span ng-if="!permission.showEditor" ng-click="permission.showEditor=true"><i class="fa fa-fw fa-pencil"></i> <span ng-bind="permission.name"></span></span>
     </td>
     <td ng-bind="permission._id"></td>
     <td>
-      <button class="btn btn-xs btn-default" ng-click="permissionsCtrl.delete($index)">Delete</button>
+      <button class="btn btn-xs btn-default" ng-click="permissionsCtrl.delete($index)"><i class="fa fa-trash"></i>Delete</button>
     </td>
   </tr>
 </table>

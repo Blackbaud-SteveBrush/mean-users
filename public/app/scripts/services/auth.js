@@ -44,6 +44,10 @@
             if (user === null) {
                 return false;
             }
+            console.log("isAuthorized", user.role);
+            if (user.role === 'admin') {
+                return true;
+            }
             return (user.permissions.indexOf(permission) > -1);
         };
 

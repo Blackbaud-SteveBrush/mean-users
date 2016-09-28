@@ -1,5 +1,15 @@
-var DatabaseObject;
+var DatabaseObject,
+    utils;
+
 DatabaseObject = require('../classes/database-object');
-module.exports = new DatabaseObject({
+utils = require('../../libs/utils');
+
+function Service(options) {
+    DatabaseObject.call(this, options);
+}
+
+utils.mixin(Service, DatabaseObject);
+
+module.exports = new Service({
     model: require('../models/permission')
 });

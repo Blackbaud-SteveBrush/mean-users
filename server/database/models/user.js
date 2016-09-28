@@ -9,7 +9,7 @@ schema = new mongoose.Schema({
         unique: true
     },
     password: String,
-    roleId: {
+    _role: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Role'
     }

@@ -1,6 +1,7 @@
 var app,
     bodyParser,
     cookieParser,
+    database,
     environment,
     errorHandler,
     express,
@@ -9,7 +10,6 @@ var app,
     http,
     LocalStrategy,
     logger,
-    mongoose,
     passport,
     port,
     routes,
@@ -24,10 +24,10 @@ bodyParser = require('body-parser');
 cookieParser = require('cookie-parser');
 LocalStrategy = require('passport-local').Strategy;
 Handlebars = require('express-handlebars');
-mongoose = require('mongoose');
 session = require('express-session');
 logger = require('morgan');
 http = require('http');
+database = require(__dirname + '/database');
 routes = require(__dirname + '/middleware/routes');
 errorHandler = require(__dirname + '/middleware/error-handler');
 User = require(__dirname + '/database/models/user');
@@ -63,8 +63,9 @@ passport.use(User.createStrategy());
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
-mongoose.Promise = global.Promise;
-mongoose.connect('mongodb://localhost:27017/mean-users');
+database.connect(function (uri) {
+    console.log('Database connected to ' + uri);
+});
 
 // Catch 404 and forward to error handler
 app.use(function (req, res, next) {

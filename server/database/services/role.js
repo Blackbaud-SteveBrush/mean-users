@@ -1,32 +1,61 @@
 var DatabaseObject,
-    PermissionService,
-    service;
+    utils;
 
 DatabaseObject = require('../classes/database-object');
-PermissionService = require(__dirname + '/permission');
-service = new DatabaseObject({
-    model: require('../models/role'),
-    onBeforeUpdate: function (data) {
-        var foundIds;
-        foundIds = [];
-        // Make sure existing permissions are valid before update.
-        return PermissionService.getAll().then(function (permissions) {
-            permissions.forEach(function (permission) {
-                data.permissions.forEach(function (permissionId) {
-                    if (permission._id.equals(permissionId)) {
-                        foundIds.push(permissionId);
-                    }
-                });
-            });
-            data.permissions = foundIds;
-        });
-    }
-});
+utils = require('../../libs/utils');
 
-service.getDefault = function () {
-    return service.model.findOne({
+function Service(options) {
+    DatabaseObject.call(this, options);
+}
+
+Service.prototype.getDefault = function () {
+    return this.settings.model.findOne({
         'isDefault': true
-    }).exec();
+    }).exec().then(function (error, doc) {
+        if (error) {
+            return Promise.reject(error);
+        }
+        if (!doc) {
+            return Promise.reject("Default role not found!");
+        }
+    });
 };
 
-module.exports = service;
+Service.prototype.getByName = function (name) {
+    return this.settings.model.findOne({
+        'name': name
+    }).exec().then(function (error, doc) {
+        if (error) {
+            return Promise.reject(error);
+        }
+        if (!doc) {
+            return Promise.reject("Role not found named '" + name + "'!");
+        }
+    });
+};
+
+Service.prototype.onBeforeUpdate = function (data) {
+    var foundIds,
+        PermissionService;
+
+    foundIds = [];
+    PermissionService = require(__dirname + '/permission');
+
+    // Make sure existing permissions are valid before update.
+    return PermissionService.getAll().then(function (permissions) {
+        permissions.forEach(function (permission) {
+            data.permissions.forEach(function (permissionId) {
+                if (permission._id.equals(permissionId)) {
+                    foundIds.push(permissionId);
+                }
+            });
+        });
+        data.permissions = foundIds;
+    });
+};
+
+utils.mixin(Service, DatabaseObject);
+
+module.exports = new Service({
+    model: require('../models/role')
+});

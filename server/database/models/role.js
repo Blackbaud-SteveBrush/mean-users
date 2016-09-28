@@ -11,7 +11,7 @@ module.exports = mongoose.model('Role', new mongoose.Schema({
         unique: true,
         required: true
     },
-    permissions: [{
+    _permissions: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Permission',
         unique: true

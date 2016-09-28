@@ -4,6 +4,7 @@
   "description": "A MEAN stack user login template",
   "main": "index.js",
   "scripts": {
+    "setup": "node ./scripts/setup.js",
     "start": "node ./scripts/start.js",
     "start:watch": "nodemon ./scripts/start.js"
   },

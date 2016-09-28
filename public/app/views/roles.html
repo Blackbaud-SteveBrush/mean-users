@@ -2,7 +2,7 @@
 <table class="table table-striped">
   <tr>
     <td>
-      <form class="form form-inline" ng-submit="rolesCtrl.submit()">
+      <form class="form form-inline" ng-submit="rolesCtrl.createRole()">
         <div class="form-group">
           <input type="text" class="form-control" id="field-role" placeholder="e.g. admin" ng-model="rolesCtrl.formData.name">
           <button type="submit" class="btn btn-default">Create</button>
@@ -32,23 +32,23 @@
         <button type="submit" class="btn btn-primary btn-xs">Update</button>
         <button type="button" class="btn btn-default btn-xs" ng-click="role.showEditor=false">Cancel</button>
       </form>
-      <span ng-if="!role.showEditor" ng-click="role.showEditor=true" ng-bind="role.name"></span>
+      <span ng-if="!role.showEditor" ng-click="role.showEditor=true"><i class="fa fa-fw fa-pencil"></i> <span ng-bind="role.name"></span></span>
     </td>
     <td>
       <form ng-submit="rolesCtrl.updateRole(role)">
         <div class="checkbox" ng-repeat="permission in rolesCtrl.permissions">
-          <label><input type="checkbox" ng-checked="role.permissions.indexOf(permission._id) > -1" ng-click="rolesCtrl.toggleSelection(permission._id)"><span ng-bind="permission.name"></span></label>
+          <label><input type="checkbox" ng-checked="role._permissions.indexOf(permission._id) > -1" ng-click="rolesCtrl.toggleSelection(role, permission._id)"><span ng-bind="permission.name"></span></label>
         </div>
         <div class="form-group">
-          <button type="submit" class="btn btn-xs btn-default">Update</button>
+          <button type="submit" class="btn btn-xs btn-primary">Update Permissions</button>
         </div>
       </form>
     </td>
     <td>
-      <label><input type="checkbox" ng-checked="role.isDefault" ng-click="rolesCtrl.updateDefault($index)"> Default</label>
+      <label><input type="checkbox" ng-checked="role.isDefault" ng-click="rolesCtrl.updateDefaultRole($index)"> Default</label>
     </td>
     <td>
-      <button class="btn btn-xs btn-default" ng-click="rolesCtrl.delete($index)">Delete</button>
+      <button class="btn btn-xs btn-default" ng-click="rolesCtrl.delete($index)"><i class="fa fa-trash"></i>Delete</button>
     </td>
   </tr>
 </table>

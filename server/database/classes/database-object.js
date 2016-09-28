@@ -4,37 +4,40 @@ merge = require('merge');
 
 function DatabaseObject(options) {
     var defaults,
-        self,
-        settings;
+        self;
 
     defaults = {};
-    settings = merge.recursive(true, defaults, options || {});
     self = this;
+    self.settings = merge.recursive(true, defaults, options || {});
 
     self.create = function (data) {
         var newDocument;
-        newDocument = new settings.model(data);
+        newDocument = new self.settings.model(data);
         return newDocument.save();
     };
 
+    self.deleteAll = function () {
+        return self.settings.model.remove({}).exec();
+    };
+
     self.deleteById = function (id) {
-        return settings.model.findOneAndRemove({
+        return self.settings.model.findOneAndRemove({
             _id: id
         }).exec();
     };
 
     self.getAll = function () {
-        return settings.model.find({}).exec();
+        return self.settings.model.find({}).exec();
     };
 
     self.getById = function (id) {
-        return settings.model.findOne({
+        return self.settings.model.findOne({
             _id: id
         }).exec();
     };
 
     self.getByIds = function (ids) {
-        return settings.model.find({
+        return self.settings.model.find({
             '_id': { $in: ids }
         }).exec();
     };
@@ -51,8 +54,8 @@ function DatabaseObject(options) {
                 return doc.save();
             });
         }
-        if (typeof settings.onBeforeUpdate === 'function') {
-            return settings.onBeforeUpdate(data).then(update);
+        if (typeof self.onBeforeUpdate === 'function') {
+            return self.onBeforeUpdate(data).then(update);
         }
         return update();
     };
