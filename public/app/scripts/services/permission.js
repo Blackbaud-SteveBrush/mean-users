@@ -1,34 +1,28 @@
 (function (angular) {
-  'use strict';
+    'use strict';
 
-  function PermissionService($http) {
-    var service;
-    service = this;
-    service.getAll = function () {
-      return $http.get('/api/permissions/').then(function (res) {
-        return res.data;
-      });
-    };
-    service.create = function (data) {
-      return $http.post('/api/permissions/', data).then(function (res) {
-        return res.data;
-      });
-    };
-    service.deleteById = function (id) {
-      return $http.delete('/api/permissions/' + id).then(function (res) {
-        return res.data;
-      });
-    };
-    service.updateById = function (id, data) {
-      return $http.put('/api/permissions/' + id, data).then(function (res) {
-        return res.data;
-      });
-    };
-  }
+    function PermissionService(CrudFactory) {
+        return CrudFactory.instantiate({
+            endpointResourceName: 'permissions',
+            authorization: {
+                delete: {
+                    permission: 'DELETE_PERMISSION'
+                },
+                post: {
+                    permission: 'CREATE_PERMISSION'
+                },
+                put: {
+                    permission: 'UPDATE_PERMISSION'
+                }
+            }
+        });
+    }
 
-  PermissionService.$inject = [
-    '$http'
-  ];
-  angular.module('capabilities-catalog')
-    .service('PermissionService', PermissionService);
+    PermissionService.$inject = [
+        'CrudFactory'
+    ];
+
+    angular.module('capabilities-catalog')
+        .service('PermissionService', PermissionService);
+
 }(window.angular));

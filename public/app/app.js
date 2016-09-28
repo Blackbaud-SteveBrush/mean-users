@@ -72,15 +72,14 @@
     }
 
     function Run($rootScope, $state, AuthService, MessageService) {
+        // Restrict routes to roles and permissions.
         $rootScope.$on('$stateChangeStart', function (e, toState) {
             AuthService
                 .getUserStatus()
                 .then(function (data) {
-                    console.log("isLoggedIn:", data);
                     toState.data = toState.data || {};
                     if (toState.data.restrictions) {
                         toState.data.restrictions = toState.data.restrictions || {};
-                        console.log("RESTRICTIONS", toState.data.restrictions);
                         if (!data.isLoggedIn || AuthService.isAuthorized(toState.data.restrictions.permission) === false || AuthService.isRole(toState.data.restrictions.role) === false) {
                             e.preventDefault();
                             MessageService.error("You are not authorized to view that page.");
@@ -89,6 +88,7 @@
                     }
                 });
         });
+
         // Store the previous state, for login redirects.
         $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
             $state.previous = {

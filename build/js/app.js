@@ -5921,15 +5921,14 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
     }
 
     function Run($rootScope, $state, AuthService, MessageService) {
+        // Restrict routes to roles and permissions.
         $rootScope.$on('$stateChangeStart', function (e, toState) {
             AuthService
                 .getUserStatus()
                 .then(function (data) {
-                    console.log("isLoggedIn:", data);
                     toState.data = toState.data || {};
                     if (toState.data.restrictions) {
                         toState.data.restrictions = toState.data.restrictions || {};
-                        console.log("RESTRICTIONS", toState.data.restrictions);
                         if (!data.isLoggedIn || AuthService.isAuthorized(toState.data.restrictions.permission) === false || AuthService.isRole(toState.data.restrictions.role) === false) {
                             e.preventDefault();
                             MessageService.error("You are not authorized to view that page.");
@@ -5938,6 +5937,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                     }
                 });
         });
+
         // Store the previous state, for login redirects.
         $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
             $state.previous = {
@@ -5971,6 +5971,107 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
         .config(ConfigRoutes)
         .run(Run)
         .controller('AppController', AppController);
+
+}(window.angular));
+
+(function (angular) {
+    'use strict';
+
+    function CrudFactory($http, $q, AuthService) {
+        function Crudable(options) {
+            var defaults,
+                self,
+                settings;
+
+            self = this;
+            defaults = {
+                authorization: {
+                    delete: {
+                        permission: null,
+                        message: "You do not have permission to delete that resource."
+                    },
+                    get: {
+                        permission: null,
+                        message: "You do not have permission to read that resource."
+                    },
+                    getAll: {
+                        permission: null,
+                        message: "You do not have permission to read those resources."
+                    },
+                    post: {
+                        permission: null,
+                        message: "You do not have permission to create that resource."
+                    },
+                    put: {
+                        permission: null,
+                        message: "You do not have permission to update that resource."
+                    }
+                }
+            };
+
+            settings = angular.merge({}, defaults, options);
+
+            self.create = function (data) {
+                if (AuthService.isAuthorized(settings.authorization.post.permission)) {
+                    return $http.post('/api/' + settings.endpointResourceName, data).then(function (res) {
+                        return res.data;
+                    });
+                }
+                return $q.reject(settings.authorization.post.message);
+            };
+
+            self.deleteById = function (id) {
+                if (AuthService.isAuthorized(settings.authorization.delete.permission)) {
+                    return $http.delete('/api/' + settings.endpointResourceName + '/' + id).then(function (res) {
+                        return res.data;
+                    });
+                }
+                return $q.reject(settings.authorization.delete.message);
+            };
+
+            self.getAll = function () {
+                if (AuthService.isAuthorized(settings.authorization.getAll.permission)) {
+                    return $http.get('/api/' + settings.endpointResourceName).then(function (res) {
+                        return res.data;
+                    });
+                }
+                return $q.reject(settings.authorization.getAll.message);
+            };
+
+            self.getById = function (id) {
+                if (AuthService.isAuthorized(settings.authorization.get.permission)) {
+                    return $http.get('/api/' + settings.endpointResourceName + '/' + id).then(function (res) {
+                        return res.data;
+                    });
+                }
+                return $q.reject(settings.authorization.get.message);
+            };
+
+            self.updateById = function (id, data) {
+                if (AuthService.isAuthorized(settings.authorization.put.permission)) {
+                    return $http.put('/api/' + settings.endpointResourceName + '/' + id, data).then(function (res) {
+                        return res.data;
+                    });
+                }
+                return $q.reject(settings.authorization.put.message);
+            };
+        }
+
+        this.instantiate = function (options) {
+            return new Crudable(options);
+        };
+
+        return this;
+    }
+
+    CrudFactory.$inject = [
+        '$http',
+        '$q',
+        'AuthService'
+    ];
+
+    angular.module('capabilities-catalog')
+        .factory('CrudFactory', CrudFactory);
 
 }(window.angular));
 
@@ -6014,8 +6115,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
         };
 
         service.isAuthorized = function (permission) {
-            console.log("isAuthorized", permission, user.permissions);
-            if (permission === undefined) {
+            if (!permission) {
                 return true;
             }
             if (user === null) {
@@ -6025,8 +6125,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
         };
 
         service.isRole = function (role) {
-            console.log("isRole", role, user.role);
-            if (role === undefined) {
+            if (!role) {
                 return true;
             }
             if (user === null) {
@@ -6085,10 +6184,14 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
         };
     }
 
-    AuthService.$inject = ['$http', '$q'];
+    AuthService.$inject = [
+        '$http',
+        '$q'
+    ];
 
     angular.module('capabilities-catalog')
-    .service('AuthService', AuthService);
+        .service('AuthService', AuthService);
+
 }(window.angular));
 
 (function (angular) {
@@ -6194,7 +6297,9 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
         };
 
         service.handleError = function (error) {
-            console.log("handleError", error);
+            if (!error) {
+                return;
+            }
             if (typeof error === 'string') {
                 service.error(error);
             } else if (error.status === 401) {
@@ -6233,122 +6338,88 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 }(window.angular));
 
 (function (angular) {
-  'use strict';
+    'use strict';
 
-  function PermissionService($http) {
-    var service;
-    service = this;
-    service.getAll = function () {
-      return $http.get('/api/permissions/').then(function (res) {
-        return res.data;
-      });
-    };
-    service.create = function (data) {
-      return $http.post('/api/permissions/', data).then(function (res) {
-        return res.data;
-      });
-    };
-    service.deleteById = function (id) {
-      return $http.delete('/api/permissions/' + id).then(function (res) {
-        return res.data;
-      });
-    };
-    service.updateById = function (id, data) {
-      return $http.put('/api/permissions/' + id, data).then(function (res) {
-        return res.data;
-      });
-    };
-  }
+    function PermissionService(CrudFactory) {
+        return CrudFactory.instantiate({
+            endpointResourceName: 'permissions',
+            authorization: {
+                delete: {
+                    permission: 'DELETE_PERMISSION'
+                },
+                post: {
+                    permission: 'CREATE_PERMISSION'
+                },
+                put: {
+                    permission: 'UPDATE_PERMISSION'
+                }
+            }
+        });
+    }
 
-  PermissionService.$inject = [
-    '$http'
-  ];
-  angular.module('capabilities-catalog')
-    .service('PermissionService', PermissionService);
+    PermissionService.$inject = [
+        'CrudFactory'
+    ];
+
+    angular.module('capabilities-catalog')
+        .service('PermissionService', PermissionService);
+
 }(window.angular));
 
 (function (angular) {
     'use strict';
 
-    function RoleService($http) {
-        var service;
-
-        service = this;
-
-        service.getAll = function () {
-            return $http.get('/api/roles/').then(function (res) {
-                return res.data;
-            });
-        };
-
-        service.create = function (data) {
-            return $http.post('/api/roles/', data).then(function (res) {
-                return res.data;
-            });
-        };
-
-        service.deleteById = function (id) {
-            return $http.delete('/api/roles/' + id).then(function (res) {
-                return res.data;
-            });
-        };
-
-        service.updateById = function (id, data) {
-            return $http.put('/api/roles/' + id, data).then(function (res) {
-                return res.data;
-            });
-        };
+    function RoleService(CrudFactory) {
+        return CrudFactory.instantiate({
+            endpointResourceName: 'roles',
+            authorization: {
+                delete: {
+                    permission: 'DELETE_ROLE'
+                },
+                post: {
+                    permission: 'CREATE_ROLE'
+                },
+                put: {
+                    permission: 'UPDATE_ROLE'
+                }
+            }
+        });
     }
 
     RoleService.$inject = [
-        '$http'
+        'CrudFactory'
     ];
 
     angular.module('capabilities-catalog')
         .service('RoleService', RoleService);
+
 }(window.angular));
 
 (function (angular) {
     'use strict';
 
-    function UserService($http) {
-        var service;
-
-        service = this;
-
-        service.create = function (data) {
-            return $http.post('/api/users', data).then(function (res) {
-                return res.data;
-            });
-        };
-
-        service.deleteById = function (id) {
-            return $http.delete('/api/users/' + id).then(function (res) {
-                return res.data;
-            });
-        };
-
-        service.getAll = function () {
-            return $http.get('/api/users').then(function (res) {
-                return res.data;
-            });
-        };
-
-        service.getById = function (id) {
-            return $http.get('/api/users/' + id).then(function (res) {
-                return res.data;
-            });
-        };
-
-        service.updateById = function (id, data) {
-            return $http.put('/api/users/' + id, data).then(function (res) {
-                return res.data;
-            });
-        };
+    function UserService(CrudFactory) {
+        return CrudFactory.instantiate({
+            endpointResourceName: 'users',
+            authorization: {
+                delete: {
+                    permission: 'DELETE_USER'
+                },
+                getAll: {
+                    permission: 'GET_USERS'
+                },
+                post: {
+                    permission: 'CREATE_USER'
+                },
+                put: {
+                    permission: 'UPDATE_USER'
+                }
+            }
+        });
     }
 
     UserService.$inject = [
-        '$http'
+        'CrudFactory'
     ];
 
     angular.module('capabilities-catalog')
@@ -7000,8 +7071,9 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
     vm = this;
     vm.formData = {};
-
+    console.log(PermissionService.getAll);
     PermissionService.getAll().then(function (data) {
+        console.log(data);
       vm.permissions = data.value;
       RoleService.getAll().then(function (data) {
         vm.roles = data.value;
@@ -7021,11 +7093,18 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
       });
     };
 
-    vm.update = function (role) {
+    vm.updateRole = function (role) {
       delete role.showEditor;
       RoleService.updateById(role._id, role).then(function (data) {
         role = data;
       });
+    };
+
+    vm.updateDefault = function (index) {
+        vm.roles.forEach(function (role, i) {
+            role.isDefault = (i === index);
+            vm.updateRole(role);
+        });
     };
 
     vm.toggleSelection = function (permissionId) {
@@ -7206,11 +7285,11 @@ angular.module('capabilities-catalog.templates', []).run(['$templateCache', func
     $templateCache.put('../public/app/views/register.html',
         '<h1>Register</h1><form class=form ng-submit=registerCtrl.submit()><div class=form-group><label for=field-email-address>Email address</label><input type=email class=form-control id=field-email-address ng-model=registerCtrl.formData.emailAddress></div><div class=form-group><label for=field-password>Password</label><input type=password class=form-control id=field-password ng-model=registerCtrl.formData.password></div><div class=form-group><button type=submit class="btn btn-primary" ng-disabled=registerCtrl.disabled>Register</button></div></form>');
     $templateCache.put('../public/app/views/roles.html',
-        '<h1>Roles</h1><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=rolesCtrl.submit()><div class=form-group><input class=form-control id=field-role placeholder="e.g. admin" ng-model=rolesCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td></tr><tr><th>Name</th><th>Permissions</th><th></th></tr><tr ng-repeat="role in rolesCtrl.roles"><td><form ng-if=role.showEditor ng-submit=rolesCtrl.update(role)><div class=form-group><input ng-model=role.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="role.showEditor=false">Cancel</button></form><span ng-if=!role.showEditor ng-click="role.showEditor=true" ng-bind=role.name></span></td><td><form ng-submit=rolesCtrl.update(role)><div class=checkbox ng-repeat="permission in rolesCtrl.permissions"><label><input type=checkbox ng-checked="role.permissions.indexOf(permission._id) > -1" ng-click=rolesCtrl.toggleSelection(permission._id)><span ng-bind=permission.name></span></label></div><div class=form-group><button type=submit class="btn btn-xs btn-default">Update</button></div></form></td><td><button class="btn btn-xs btn-default" ng-click=rolesCtrl.delete($index)>Delete</button></td></tr></table>');
+        '<h1>Roles</h1><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=rolesCtrl.submit()><div class=form-group><input class=form-control id=field-role placeholder="e.g. admin" ng-model=rolesCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td><td></td></tr><tr><th>Name</th><th>Permissions</th><th></th><th></th></tr><tr ng-repeat="role in rolesCtrl.roles"><td><form ng-if=role.showEditor ng-submit=rolesCtrl.updateRole(role)><div class=form-group><input ng-model=role.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="role.showEditor=false">Cancel</button></form><span ng-if=!role.showEditor ng-click="role.showEditor=true" ng-bind=role.name></span></td><td><form ng-submit=rolesCtrl.updateRole(role)><div class=checkbox ng-repeat="permission in rolesCtrl.permissions"><label><input type=checkbox ng-checked="role.permissions.indexOf(permission._id) > -1" ng-click=rolesCtrl.toggleSelection(permission._id)><span ng-bind=permission.name></span></label></div><div class=form-group><button type=submit class="btn btn-xs btn-default">Update</button></div></form></td><td><label><input type=checkbox ng-checked=role.isDefault ng-click=rolesCtrl.updateDefault($index)> Default</label></td><td><button class="btn btn-xs btn-default" ng-click=rolesCtrl.delete($index)>Delete</button></td></tr></table>');
     $templateCache.put('../public/app/views/user-form.html',
         '<div bb-wait=userFormCtrl.waiting class=container ng-if=userFormCtrl.isReady><div class=page-header bb-scroll-into-view=userFormCtrl.scrollToTop><h1 ng-if=userFormCtrl.formData._id>Edit {{ userFormCtrl.formData.emailAddress }}</h1><h1 ng-if=!userFormCtrl.formData._id>Administrator User Registration</h1></div><div ng-if=::userFormCtrl.isVisible bb-scroll-into-view=userFormCtrl.scrollToTop><form name=register-form id=form-login class=form-horizontal ng-submit=userFormCtrl.submit() method=post validate><div class="col-md-9 col-sm-10 form-group tab-pane"><div class=form-group ng-class="{\'has-error\': register-form.emailAddress.$touched && register-form.emailAddress.$invalid}"><label class="col-md-3 col-sm-2 control-label">Email Address:</label><div class="col-md-9 col-sm-10"><input class=form-control autocomplete=off type=email name=registerEmailAddress ng-model=userFormCtrl.formData.emailAddress placeholder=(required) required><div ng-show=register-form.$error.email class=help-block>Valid email address is required.</div></div></div><div class=form-group><label class="col-md-3 col-sm-2 control-label">Role:</label><div class="col-md-9 col-sm-10"><select class=form-control name=roleModel ng-model=userFormCtrl.formData.roleId required><option value="" ng-selected="userFormCtrl.formData.roleId === role._id">--- Select ---</option><option ng-repeat="role in userFormCtrl.roles" value="{{ role._id }}">{{ role.name }}</option></select><div ng-show=register-form.roleModel.$error.required class=help-block>Valid user role selection required.</div></div></div></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-primary btn-block" type=submit ng-disabled="register-form.$invalid || userFormCtrl.waiting"><i class="fa fa-save"></i>Save</button> <button ng-if=!userFormCtrl.formData._id class="btn btn-primary btn-block" type=submit ng-disabled="register-form.$invalid || userFormCtrl.waiting"><i class="fa fa-plus"></i>Create</button> <button ng-if="::userFormCtrl.formData._id && appCtrl.isAuthorized(\'DELETE_ADOPTION_STATUS\')" class="btn btn-danger btn-block" type=button cc-confirm-click="Are you sure you want to DELETE {{userFormCtrl.formData.emailAddress}}" data-confirmed-click=userFormCtrl.delete()><i class="fa fa-trash"></i>Delete</button></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-default btn-block" type=button ng-click=userFormCtrl.requestReset() ng-disabled=userFormCtrl.waiting cc-confirm-click="Are you sure you want to request a passphrase reset for {{userFormCtrl.formData.emailAddress}}?"><i class="fa fa-refresh" aria-hidden=true></i>Reset Passphrase</button></div></form></div><div ng-if=::!userFormCtrl.isVisible class="alert alert-warning">You are not authorized to view this page</div></div>');
     $templateCache.put('../public/app/views/users.html',
-        '<h1>Users</h1><div class=table-responsive><table class="table table-striped"><tr><th class=form-sort-tab ng-click="usersCtrl.sortBy(\'emailAddress\')" ng-class="{\'active\':usersCtrl.sortType === \'emailAddress\'}">Email Address <span class=carrots ng-if="usersCtrl.sortType === \'emailAddress\'"><i class="fa fa-caret-up fa-3" ng-if=!usersCtrl.reverseSort aria-hidden=true></i> <i class="fa fa-caret-down fa-4" ng-if=usersCtrl.reverseSort aria-hidden=true></i></span></th><th class=form-sort-tab ng-click="usersCtrl.sortBy(\'role\')" ng-class="{\'active\':usersCtrl.sortType === \'role\'}">Role <span class=carrots ng-if="usersCtrl.sortType === \'role\'"><i class="fa fa-caret-up fa-5" ng-if=!usersCtrl.reverseSort aria-hidden=true></i> <i class="fa fa-caret-down fa-6" ng-if=usersCtrl.reverseSort aria-hidden=true></i></span></th><th></th><th></th></tr><tr ng-repeat="user in usersCtrl.users | orderBy:usersCtrl.sortType:usersCtrl.reverseSort"><td><span ng-bind=::user.emailAddress></span></td><td><span ng-bind=::user.role></span></td><td><pre>{{:: user | json }}</pre></td><td><a ui-sref="admin.user-form({ id: user._id })" class="btn btn-default"><i class="fa fa-pencil"></i> Edit</a></td></tr></table></div>');
+        '<div class=page-header><div class=controls><a class="btn btn-default" ng-if="appCtrl.isAuthorized(\'CREATE_USER\')" ui-sref="admin.user-form({ id: null })" href><i class="fa fa-file-text-o"></i>Add new user</a></div><h1 class=bb-page-heading>Users</h1></div><div class=table-responsive><table class="table table-striped"><tr><th class=form-sort-tab ng-click="usersCtrl.sortBy(\'emailAddress\')" ng-class="{\'active\':usersCtrl.sortType === \'emailAddress\'}">Email Address <span class=carrots ng-if="usersCtrl.sortType === \'emailAddress\'"><i class="fa fa-caret-up fa-3" ng-if=!usersCtrl.reverseSort aria-hidden=true></i> <i class="fa fa-caret-down fa-4" ng-if=usersCtrl.reverseSort aria-hidden=true></i></span></th><th class=form-sort-tab ng-click="usersCtrl.sortBy(\'role\')" ng-class="{\'active\':usersCtrl.sortType === \'role\'}">Role <span class=carrots ng-if="usersCtrl.sortType === \'role\'"><i class="fa fa-caret-up fa-5" ng-if=!usersCtrl.reverseSort aria-hidden=true></i> <i class="fa fa-caret-down fa-6" ng-if=usersCtrl.reverseSort aria-hidden=true></i></span></th><th></th></tr><tr ng-repeat="user in usersCtrl.users | orderBy:usersCtrl.sortType:usersCtrl.reverseSort"><td><span ng-bind=::user.emailAddress></span></td><td><span ng-bind=::user.roleId></span></td><td><a ui-sref="admin.user-form({ id: user._id })" class="btn btn-default"><i class="fa fa-pencil"></i> Edit</a></td></tr></table></div>');
     $templateCache.put('../public/app/components/back-to-top/back-to-top.html',
         '<div class=back-to-top ng-click=backToTop()><i class="fa fa-angle-double-up"></i></div>');
     $templateCache.put('../public/app/components/breadcrumbs/breadcrumbs.html',

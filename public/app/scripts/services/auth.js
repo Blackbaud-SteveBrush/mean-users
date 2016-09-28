@@ -38,8 +38,7 @@
         };
 
         service.isAuthorized = function (permission) {
-            console.log("isAuthorized", permission, user.permissions);
-            if (permission === undefined) {
+            if (!permission) {
                 return true;
             }
             if (user === null) {
@@ -49,8 +48,7 @@
         };
 
         service.isRole = function (role) {
-            console.log("isRole", role, user.role);
-            if (role === undefined) {
+            if (!role) {
                 return true;
             }
             if (user === null) {
@@ -109,8 +107,12 @@
         };
     }
 
-    AuthService.$inject = ['$http', '$q'];
+    AuthService.$inject = [
+        '$http',
+        '$q'
+    ];
 
     angular.module('capabilities-catalog')
-    .service('AuthService', AuthService);
+        .service('AuthService', AuthService);
+
 }(window.angular));

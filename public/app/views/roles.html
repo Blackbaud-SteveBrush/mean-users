@@ -11,6 +11,7 @@
     </td>
     <td></td>
     <td></td>
+    <td></td>
   </tr>
   <tr>
     <th>
@@ -20,10 +21,11 @@
       Permissions
     </th>
     <th></th>
+    <th></th>
   </tr>
   <tr ng-repeat="role in rolesCtrl.roles">
     <td>
-      <form ng-if="role.showEditor" ng-submit="rolesCtrl.update(role)">
+      <form ng-if="role.showEditor" ng-submit="rolesCtrl.updateRole(role)">
         <div class="form-group">
           <input ng-model="role.name" class="form-control">
         </div>
@@ -33,7 +35,7 @@
       <span ng-if="!role.showEditor" ng-click="role.showEditor=true" ng-bind="role.name"></span>
     </td>
     <td>
-      <form ng-submit="rolesCtrl.update(role)">
+      <form ng-submit="rolesCtrl.updateRole(role)">
         <div class="checkbox" ng-repeat="permission in rolesCtrl.permissions">
           <label><input type="checkbox" ng-checked="role.permissions.indexOf(permission._id) > -1" ng-click="rolesCtrl.toggleSelection(permission._id)"><span ng-bind="permission.name"></span></label>
         </div>
@@ -41,6 +43,9 @@
           <button type="submit" class="btn btn-xs btn-default">Update</button>
         </div>
       </form>
+    </td>
+    <td>
+      <label><input type="checkbox" ng-checked="role.isDefault" ng-click="rolesCtrl.updateDefault($index)"> Default</label>
     </td>
     <td>
       <button class="btn btn-xs btn-default" ng-click="rolesCtrl.delete($index)">Delete</button>

@@ -1,10 +1,10 @@
 var DatabaseObject,
-    PermissionService;
+    PermissionService,
+    service;
 
 DatabaseObject = require('../classes/database-object');
 PermissionService = require(__dirname + '/permission');
-
-module.exports = new DatabaseObject({
+service = new DatabaseObject({
     model: require('../models/role'),
     onBeforeUpdate: function (data) {
         var foundIds;
@@ -22,3 +22,11 @@ module.exports = new DatabaseObject({
         });
     }
 });
+
+service.getDefault = function () {
+    return service.model.findOne({
+        'isDefault': true
+    }).exec();
+};
+
+module.exports = service;

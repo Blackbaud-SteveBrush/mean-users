@@ -6,8 +6,9 @@
 
     vm = this;
     vm.formData = {};
-
+    console.log(PermissionService.getAll);
     PermissionService.getAll().then(function (data) {
+        console.log(data);
       vm.permissions = data.value;
       RoleService.getAll().then(function (data) {
         vm.roles = data.value;
@@ -27,11 +28,18 @@
       });
     };
 
-    vm.update = function (role) {
+    vm.updateRole = function (role) {
       delete role.showEditor;
       RoleService.updateById(role._id, role).then(function (data) {
         role = data;
       });
+    };
+
+    vm.updateDefault = function (index) {
+        vm.roles.forEach(function (role, i) {
+            role.isDefault = (i === index);
+            vm.updateRole(role);
+        });
     };
 
     vm.toggleSelection = function (permissionId) {

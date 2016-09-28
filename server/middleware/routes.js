@@ -16,8 +16,8 @@ PermissionService = require('../database/services/permission');
 RoleService = require('../database/services/role');
 UserService = require('../database/services/user');
 utils = require('../libs/utils');
-
 router = express.Router();
+
 require(__dirname + '/auth')(router);
 
 router.get('/', function (req, res) {
@@ -28,18 +28,19 @@ router.get('/', function (req, res) {
 });
 
 router.post('/api/register', function (req, res, next) {
-    User.collection.dropAllIndexes(function () {});
-    User.register(new User({
-        emailAddress: req.body.emailAddress
-    }), req.body.password, function (err, user) {
-        console.log(err, user);
-        if (err) {
-            return next(err);
-        }
-        passport.authenticate('local')(req, res, function () {
-            return res.status(200).json({
-                status: 'Registration successful!',
-                user: user
+    RoleService.getDefault().then(function (defaultRole) {
+        User.register(new User({
+            emailAddress: req.body.emailAddress,
+            roleId: req.body.roleId || defaultRole._id
+        }), req.body.password, function (err, user) {
+            if (err) {
+                return next(err);
+            }
+            passport.authenticate('local')(req, res, function () {
+                return res.status(200).json({
+                    status: 'Registration successful!',
+                    user: user
+                });
             });
         });
     });

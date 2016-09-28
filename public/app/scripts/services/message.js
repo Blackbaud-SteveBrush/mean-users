@@ -101,7 +101,9 @@
         };
 
         service.handleError = function (error) {
-            console.log("handleError", error);
+            if (!error) {
+                return;
+            }
             if (typeof error === 'string') {
                 service.error(error);
             } else if (error.status === 401) {
