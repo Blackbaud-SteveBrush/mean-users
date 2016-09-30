@@ -5884,8 +5884,10 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                 url: '/profile',
                 templateUrl: '../public/app/views/profile.html',
                 controller: 'ProfileController as profileCtrl',
-                restrictions: {
-                    role: 'editor'
+                data: {
+                    restrictions: {
+                        role: 'editor'
+                    }
                 }
             })
             .state('admin', {
@@ -5920,9 +5922,16 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             });
     }
 
-    function Run($rootScope, $state, AuthService, MessageService) {
+    function Run($rootScope, $state, $window, AuthService, MessageService) {
+        var bypass;
+        bypass = false;
         // Restrict routes to roles and permissions.
-        $rootScope.$on('$stateChangeStart', function (e, toState) {
+        $rootScope.$on('$stateChangeStart', function (e, toState, toParams) {
+            if (bypass || toState.name === 'login') {
+                bypass = false;
+                return;
+            }
+            e.preventDefault();
             AuthService
                 .getUserStatus()
                 .then(function (data) {
@@ -5930,11 +5939,17 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                     if (toState.data.restrictions) {
                         toState.data.restrictions = toState.data.restrictions || {};
                         if (!data.isLoggedIn || AuthService.isAuthorized(toState.data.restrictions.permission) === false || AuthService.isRole(toState.data.restrictions.role) === false) {
-                            e.preventDefault();
                             MessageService.error("You are not authorized to view that page.");
-                            $state.go('login');
+                            $state.go('login', {}, {
+                                reload: true,
+                                notify: false
+                            });
+                            $window.location.reload();
+                            return;
                         }
                     }
+                    bypass = true;
+                    $state.go(toState, toParams);
                 });
         });
 
@@ -5944,29 +5959,41 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                 name: fromState.name,
                 params: fromParams
             };
+            $rootScope.$broadcast('ccAuthorizationSuccess');
         });
     }
 
-    function AppController(AuthService) {
+    function AppController($scope, AuthService) {
         var vm;
         vm = this;
         vm.isLoggedIn = AuthService.isLoggedIn;
         vm.isAuthorized = AuthService.isAuthorized;
+        $scope.$on('ccAuthorizationSuccess', function () {
+            vm.isReady = true;
+        });
     }
 
-    ConfigRoutes.$inject = ['$stateProvider', '$urlRouterProvider'];
+    ConfigRoutes.$inject = [
+        '$stateProvider',
+        '$urlRouterProvider'
+    ];
     Run.$inject = [
         '$rootScope',
         '$state',
+        '$window',
         'AuthService',
         'MessageService'
     ];
-    AppController.$inject = ['AuthService'];
+    AppController.$inject = [
+        '$scope',
+        'AuthService'
+    ];
 
     angular.module('capabilities-catalog', [
         'sky',
         'ui.router',
-        'capabilities-catalog.templates'
+        'capabilities-catalog.templates',
+        'ngSanitize'
     ])
         .config(ConfigRoutes)
         .run(Run)
@@ -6087,6 +6114,10 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
         service = this;
         user = null;
 
+        service.getUser = function () {
+            return user;
+        };
+
         service.getUserStatus = function () {
             var deferred;
 
@@ -6121,7 +6152,6 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             if (user === null) {
                 return false;
             }
-            console.log("isAuthorized", user.role);
             if (user.role === 'admin') {
                 return true;
             }
@@ -6135,7 +6165,10 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             if (user === null) {
                 return false;
             }
-            return user.role === role;
+            if (user.role === 'admin') {
+                return true;
+            }
+            return (user.role === role);
         };
 
         service.login = function (emailAddress, password) {
@@ -6891,6 +6924,82 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
         .directive('routeCssClassname', routeCssClassname);
 }());
 
+(function (angular) {
+    'use strict';
+
+    function ccSortableTable() {
+        return {
+            restrict: 'E',
+            templateUrl: '../public/app/components/sortable-table/sortable-table.html',
+            scope: true,
+            bindToController: {
+                'model': '=',
+                'columns': '='
+            },
+            controller: 'SortableTableController as sortableCtrl'
+        };
+    }
+
+    function SortableTableController() {
+        var vm;
+
+        vm = this;
+        vm.ascending = true;
+
+        vm.isActiveColumn = function (column) {
+            return (column.model && vm.orderBy === column.model);
+        };
+
+        vm.isOrderable = function (column) {
+            if (!column.name) {
+                return false;
+            }
+            if (column.isOrderable === false) {
+                return false;
+            }
+            return true;
+        };
+
+        vm.parseModelFromString = function (item, key) {
+            var data,
+                temp;
+
+            temp = [];
+
+            if (!key) {
+                return null;
+            }
+
+            if (key.indexOf('.') > -1) {
+                key.split('.').forEach(function (property) {
+                    data = temp[property];
+                    if (!data) {
+                        temp = item[property];
+                    }
+                });
+                return data;
+            }
+            return item[key];
+        };
+
+        vm.setOrderBy = function (key) {
+            if (vm.orderBy === key) {
+                vm.toggleDirection();
+            }
+            vm.orderBy = key;
+        };
+
+        vm.toggleDirection = function () {
+            vm.ascending = !vm.ascending;
+        };
+    }
+
+    angular.module('capabilities-catalog')
+        .controller('SortableTableController', SortableTableController)
+        .directive('ccSortableTable', ccSortableTable);
+
+}(window.angular));
+
 (function () {
     'use strict';
 
@@ -6950,20 +7059,16 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
         vm.redirect = function () {
             var params,
                 state;
+
             state = $state.previous.name;
             params = $state.previous.params;
+
             if (!state || state === 'login') {
                 state = 'home';
                 params = {};
             }
-            $state.go(
-                state,
-                params,
-                {
-                    reload: true
-                }
-            );
-            $window.location.reload();
+            $state.go(state, params, { reload: true, notify: false });
+            $window.location.reload(true);
         };
     }
 
@@ -7026,10 +7131,19 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 (function (angular) {
   'use strict';
 
-  function ProfileController() {}
+  function ProfileController(AuthService) {
+      var vm;
+      vm = this;
+      vm.user = AuthService.getUser();
+  }
+
+  ProfileController.$inject = [
+      'AuthService'
+  ];
 
   angular.module('capabilities-catalog')
     .controller('ProfileController', ProfileController);
+
 }(window.angular));
 
 (function (angular) {
@@ -7040,19 +7154,14 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
         vm = this;
         vm.formData = {};
+
         vm.submit = function () {
-            vm.disabled = true;
             AuthService
                 .register(vm.formData)
                 .then(function () {
                     $state.go('login');
-                    vm.disabled = false;
                 })
-                .catch(function (error) {
-                    MessageService.handleError(error);
-                    vm.formData = {};
-                    vm.disabled = false;
-                });
+                .catch(MessageService.handleError);
         };
     }
 
@@ -7138,14 +7247,31 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
         vm = this;
         vm.isAuthorized = AuthService.isAuthorized;
-        vm.isAuthenticated = AuthService.isAuthenticated;
-        vm.isVisible = vm.isAuthorized('CREATE_USER');
+
+        function handleResponse(data) {
+            if (vm.formData._id) {
+                MessageService.handleSuccess({
+                    messageText: 'User successfully updated.',
+                    link: 'admin.users',
+                    linkText: 'View all'
+                });
+            } else {
+                MessageService.handleSuccess({
+                    messageText: 'User successfully created.',
+                    link: 'admin.users',
+                    linkText: 'View all'
+                });
+            }
+            vm.formData = data;
+        }
 
         vm.delete = function () {
             UserService
                 .deleteById($state.params.id)
                 .then(function () {
-                    $state.go('admin.users');
+                    $state.go('admin.users', {}, {
+                        reload: true
+                    });
                     MessageService.handleSuccess('User deleted!');
                 })
                 .catch(MessageService.handleError);
@@ -7159,52 +7285,27 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                 .catch(MessageService.handleError);
         };
 
+        vm.isSelected = function (role) {
+            if (!vm.formData || vm.formData._role === role._id) {
+                return true;
+            }
+            return (role.isDefault === true);
+        };
+
         vm.submit = function () {
-            vm.scrollToTop = false;
-            vm.waiting = true;
             if (vm.formData._id) {
                 UserService
                     .updateById($state.params.id, vm.formData)
                     .then(handleResponse)
-                    .catch(MessageService.handleError)
-                    .then(function () {
-                        vm.waiting = false;
-                    });
+                    .catch(MessageService.handleError);
             } else {
                 UserService
                     .create(vm.formData)
                     .then(handleResponse)
-                    .catch(MessageService.handleError)
-                    .then(function () {
-                        vm.waiting = false;
-                    });
+                    .catch(MessageService.handleError);
             }
         };
 
-        function handleResponse(data) {
-            vm.waiting = false;
-            if (vm.formData._id) {
-                MessageService.handleSuccess({
-                    messageText: data.emailAddress + ' user updated!',
-                    link: 'admin.users',
-                    linkText: 'View all'
-                });
-            } else {
-                MessageService.handleSuccess({
-                    messageText: data.emailAddress + ' user created!',
-                    link: 'admin.users',
-                    linkText: 'View all'
-                });
-            }
-            vm.formData = data;
-            vm.scrollToTop = true;
-        }
-
-        /**
-        * This runs on page load, populates our role drop down menu, and attempts to grab a
-        * user from the server based on the $state.params.id in our address.   If no params exist
-        * our service catches it and returns a promised empty {data: {}} for our form data.
-        */
         RoleService
             .getAll()
             .then(function (data) {
@@ -7213,8 +7314,6 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             })
             .then(function (data) {
                 vm.formData = data;
-                vm.isReady = true;
-                vm.resetPassphrase = false;
             })
             .catch(MessageService.handleError);
     }
@@ -7231,49 +7330,54 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
     angular.module('capabilities-catalog')
         .controller('UserFormController', UserFormController);
+
 }(window.angular));
 
 (function (angular) {
   'use strict';
 
-  function UsersController(MessageService, UserService) {
+  function UsersController($state, MessageService, UserService) {
         var vm;
 
         vm = this;
-
-        vm.sortType = 'emailAddress';
-        vm.reverseSort = false;
-
-        vm.sortBy = function (propertyName) {
-            if (vm.sortType === propertyName) {
-                vm.toggleReverse();
-            }
-            vm.sortType = propertyName;
-        };
-
-        vm.toggleReverse = function () {
-            if (vm.reverseSort) {
-                vm.reverseSort = false;
-            } else {
-                vm.reverseSort = true;
-            }
+        vm.sortableTable = {
+            columns: [
+                {
+                    name: 'Email Address',
+                    model: 'emailAddress'
+                },
+                {
+                    name: 'Role',
+                    model: '_role.name'
+                },
+                {
+                    name: '',
+                    button: {
+                        action: function (item) {
+                            $state.go('admin.user-form', { id: item._id });
+                        },
+                        label: '<i class="fa fa-pencil"></i>Edit'
+                    }
+                }
+            ]
         };
 
         UserService
             .getAll()
             .then(function (data) {
                 vm.users = data.value;
-                vm.isReady = true;
             }).catch(MessageService.handleError);
     }
 
     UsersController.$inject = [
+        '$state',
         'MessageService',
         'UserService'
     ];
 
     angular.module('capabilities-catalog')
         .controller('UsersController', UsersController);
+
 }(window.angular));
 
 angular.module('capabilities-catalog.templates', []).run(['$templateCache', function($templateCache) {
@@ -7282,17 +7386,17 @@ angular.module('capabilities-catalog.templates', []).run(['$templateCache', func
     $templateCache.put('../public/app/views/login.html',
         '<h1>Content Editor Login</h1><cc-login-form on-success=loginPageCtrl.redirect></cc-login-form>');
     $templateCache.put('../public/app/views/permissions.html',
-        '<h1>Permissions</h1><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=permissionsCtrl.submit()><div class=form-group><input class=form-control id=field-permission placeholder=MY_PERMISSION ng-model=permissionsCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td></tr><tr><th>Name</th><th>ID</th><th></th></tr><tr ng-repeat="permission in permissionsCtrl.permissions"><td><form ng-if=permission.showEditor ng-submit=permissionsCtrl.update(permission)><div class=form-group><input ng-model=permission.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="permission.showEditor=false">Cancel</button></form><span ng-if=!permission.showEditor ng-click="permission.showEditor=true"><i class="fa fa-fw fa-pencil"></i> <span ng-bind=permission.name></span></span></td><td ng-bind=permission._id></td><td><button class="btn btn-xs btn-default" ng-click=permissionsCtrl.delete($index)><i class="fa fa-trash"></i>Delete</button></td></tr></table>');
+        '<h1>Permissions</h1><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=permissionsCtrl.submit()><div class=form-group><input class=form-control id=field-permission placeholder=MY_PERMISSION ng-model=permissionsCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td></tr><tr><th>Name</th><th>ID</th><th></th></tr><tr ng-repeat="permission in permissionsCtrl.permissions | orderBy:\'name\':false track by $index"><td><form ng-if=permission.showEditor ng-submit=permissionsCtrl.update(permission)><div class=form-group><input ng-model=permission.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="permission.showEditor=false">Cancel</button></form><span ng-if=!permission.showEditor ng-click="permission.showEditor=true"><i class="fa fa-fw fa-pencil"></i> <span ng-bind=permission.name></span></span></td><td ng-bind=permission._id></td><td><button class="btn btn-xs btn-default" ng-click=permissionsCtrl.delete($index)><i class="fa fa-trash"></i>Delete</button></td></tr></table>');
     $templateCache.put('../public/app/views/profile.html',
-        'Profile');
+        '<h1>My Profile</h1><table class="table table-striped"><tr><td style=width:25%>Email Address</td><td><i class="fa fa-fw fa-envelope"></i> <span ng-bind=profileCtrl.user.emailAddress></span></td></tr><tr><td>ID</td><td><i class="fa fa-fw fa-user"></i> <span ng-bind=profileCtrl.user._id></span></td></tr><tr><td>Role</td><td><i class="fa fa-fw fa-certificate"></i> <span ng-bind=profileCtrl.user.role></span></td></tr></table>');
     $templateCache.put('../public/app/views/register.html',
-        '<h1>Register</h1><form class=form ng-submit=registerCtrl.submit()><div class=form-group><label for=field-email-address>Email address</label><input type=email class=form-control id=field-email-address ng-model=registerCtrl.formData.emailAddress></div><div class=form-group><label for=field-password>Password</label><input type=password class=form-control id=field-password ng-model=registerCtrl.formData.password></div><div class=form-group><button type=submit class="btn btn-primary" ng-disabled=registerCtrl.disabled>Register</button></div></form>');
+        '<h1>Register</h1><form class=form ng-submit=registerCtrl.submit()><div class=form-group><label for=field-email-address>Email address</label><input type=email class=form-control id=field-email-address ng-model=registerCtrl.formData.emailAddress></div><div class=form-group><label for=field-password>Password</label><input type=password class=form-control id=field-password ng-model=registerCtrl.formData.password></div><div class=form-group><button type=submit class="btn btn-primary">Register</button></div></form>');
     $templateCache.put('../public/app/views/roles.html',
-        '<h1>Roles</h1><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=rolesCtrl.createRole()><div class=form-group><input class=form-control id=field-role placeholder="e.g. admin" ng-model=rolesCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td><td></td></tr><tr><th>Name</th><th>Permissions</th><th></th><th></th></tr><tr ng-repeat="role in rolesCtrl.roles"><td><form ng-if=role.showEditor ng-submit=rolesCtrl.updateRole(role)><div class=form-group><input ng-model=role.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="role.showEditor=false">Cancel</button></form><span ng-if=!role.showEditor ng-click="role.showEditor=true"><i class="fa fa-fw fa-pencil"></i> <span ng-bind=role.name></span></span></td><td><form ng-submit=rolesCtrl.updateRole(role)><div class=checkbox ng-repeat="permission in rolesCtrl.permissions"><label><input type=checkbox ng-checked="role._permissions.indexOf(permission._id) > -1" ng-click="rolesCtrl.toggleSelection(role, permission._id)"><span ng-bind=permission.name></span></label></div><div class=form-group><button type=submit class="btn btn-xs btn-primary">Update Permissions</button></div></form></td><td><label><input type=checkbox ng-checked=role.isDefault ng-click=rolesCtrl.updateDefaultRole($index)> Default</label></td><td><button class="btn btn-xs btn-default" ng-click=rolesCtrl.delete($index)><i class="fa fa-trash"></i>Delete</button></td></tr></table>');
+        '<h1>Roles</h1><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=rolesCtrl.createRole()><div class=form-group><input class=form-control id=field-role placeholder="e.g. admin" ng-model=rolesCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td><td></td></tr><tr><th>Name</th><th>Permissions</th><th></th><th></th></tr><tr ng-repeat="role in rolesCtrl.roles"><td><form ng-if=role.showEditor ng-submit=rolesCtrl.updateRole(role)><div class=form-group><input ng-model=role.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="role.showEditor=false">Cancel</button></form><span ng-if=!role.showEditor ng-click="role.showEditor=true"><i class="fa fa-fw fa-pencil"></i> <span ng-bind=role.name></span></span></td><td><form ng-submit=rolesCtrl.updateRole(role)><div class=checkbox ng-repeat="permission in rolesCtrl.permissions"><label><input type=checkbox ng-checked="role._permissions.indexOf(permission._id) > -1" ng-click="rolesCtrl.toggleSelection(role, permission._id)"><span ng-bind=permission.name></span></label></div><div class=form-group><button type=submit class="btn btn-xs btn-primary">Update Permissions</button></div></form></td><td><label><input ng-disabled="role.name === \'admin\'" type=checkbox ng-checked=role.isDefault ng-click=rolesCtrl.updateDefaultRole($index)> Default</label></td><td><button class="btn btn-xs btn-default" ng-click=rolesCtrl.delete($index)><i class="fa fa-trash"></i>Delete</button></td></tr></table>');
     $templateCache.put('../public/app/views/user-form.html',
-        '<div bb-wait=userFormCtrl.waiting class=container ng-if=userFormCtrl.isReady><div class=page-header bb-scroll-into-view=userFormCtrl.scrollToTop><h1 ng-if=userFormCtrl.formData._id>Edit {{ userFormCtrl.formData.emailAddress }}</h1><h1 ng-if=!userFormCtrl.formData._id>Administrator User Registration</h1></div><div ng-if=::userFormCtrl.isVisible bb-scroll-into-view=userFormCtrl.scrollToTop><form name=register-form id=form-login class=form-horizontal ng-submit=userFormCtrl.submit() method=post validate><div class="col-md-9 col-sm-10 form-group tab-pane"><div class=form-group ng-class="{\'has-error\': register-form.emailAddress.$touched && register-form.emailAddress.$invalid}"><label class="col-md-3 col-sm-2 control-label">Email Address:</label><div class="col-md-9 col-sm-10"><input class=form-control autocomplete=off type=email name=registerEmailAddress ng-model=userFormCtrl.formData.emailAddress placeholder=(required) required><div ng-show=register-form.$error.email class=help-block>Valid email address is required.</div></div></div><div class=form-group><label class="col-md-3 col-sm-2 control-label">Role:</label><div class="col-md-9 col-sm-10"><select class=form-control name=roleModel ng-model=userFormCtrl.formData.roleId required><option value="" ng-selected="userFormCtrl.formData.roleId === role._id">--- Select ---</option><option ng-repeat="role in userFormCtrl.roles" value="{{ role._id }}">{{ role.name }}</option></select><div ng-show=register-form.roleModel.$error.required class=help-block>Valid user role selection required.</div></div></div></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-primary btn-block" type=submit ng-disabled="register-form.$invalid || userFormCtrl.waiting"><i class="fa fa-save"></i>Save</button> <button ng-if=!userFormCtrl.formData._id class="btn btn-primary btn-block" type=submit ng-disabled="register-form.$invalid || userFormCtrl.waiting"><i class="fa fa-plus"></i>Create</button> <button ng-if="::userFormCtrl.formData._id && appCtrl.isAuthorized(\'DELETE_ADOPTION_STATUS\')" class="btn btn-danger btn-block" type=button cc-confirm-click="Are you sure you want to DELETE {{userFormCtrl.formData.emailAddress}}" data-confirmed-click=userFormCtrl.delete()><i class="fa fa-trash"></i>Delete</button></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-default btn-block" type=button ng-click=userFormCtrl.requestReset() ng-disabled=userFormCtrl.waiting cc-confirm-click="Are you sure you want to request a passphrase reset for {{userFormCtrl.formData.emailAddress}}?"><i class="fa fa-refresh" aria-hidden=true></i>Reset Passphrase</button></div></form></div><div ng-if=::!userFormCtrl.isVisible class="alert alert-warning">You are not authorized to view this page</div></div>');
+        '<div class=page-header><h1 ng-if=userFormCtrl.formData._id>Edit User</h1><h1 ng-if=!userFormCtrl.formData._id>New User Registration</h1></div><form name=register-form id=form-login class=form-horizontal ng-submit=userFormCtrl.submit() method=post validate><div class="col-md-9 col-sm-10 form-group tab-pane"><div class=form-group ng-class="{\'has-error\': register-form.emailAddress.$touched && register-form.emailAddress.$invalid}"><label class="col-md-3 col-sm-2 control-label">Email Address:</label><div class="col-md-9 col-sm-10"><input class=form-control autocomplete=off type=email name=registerEmailAddress ng-model=userFormCtrl.formData.emailAddress placeholder=(required) required><div ng-show=register-form.$error.email class=help-block>Valid email address is required.</div></div></div><div class=form-group><label class="col-md-3 col-sm-2 control-label">Role:</label><div class="col-md-9 col-sm-10"><select class=form-control name=roleModel ng-model=userFormCtrl.formData._role required><option value="">--- Select ---</option><option ng-repeat="role in userFormCtrl.roles track by $index" value="{{ role._id }}" ng-selected=::userFormCtrl.isSelected(role)>{{ role.name }}</option></select><div ng-show=register-form.roleModel.$error.required class=help-block>Valid user role selection required.</div></div></div></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-primary btn-block" type=submit ng-disabled="register-form.$invalid || userFormCtrl.waiting"><i class="fa fa-save"></i>Save</button> <button ng-if=!userFormCtrl.formData._id class="btn btn-primary btn-block" type=submit ng-disabled="register-form.$invalid || userFormCtrl.waiting"><i class="fa fa-plus"></i>Create</button> <button ng-if="::userFormCtrl.formData._id && appCtrl.isAuthorized(\'DELETE_ADOPTION_STATUS\')" class="btn btn-danger btn-block" type=button cc-confirm-click="Are you sure you want to DELETE {{userFormCtrl.formData.emailAddress}}" data-confirmed-click=userFormCtrl.delete()><i class="fa fa-trash"></i>Delete</button></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-default btn-block" type=button ng-click=userFormCtrl.requestReset() ng-disabled=userFormCtrl.waiting cc-confirm-click="Are you sure you want to request a passphrase reset for {{userFormCtrl.formData.emailAddress}}?"><i class="fa fa-refresh" aria-hidden=true></i>Reset Passphrase</button></div></form>');
     $templateCache.put('../public/app/views/users.html',
-        '<div class=page-header><div class=controls><a class="btn btn-default" ng-if="appCtrl.isAuthorized(\'CREATE_USER\')" ui-sref="admin.user-form({ id: null })" href><i class="fa fa-file-text-o"></i>Add new user</a></div><h1 class=bb-page-heading>Users</h1></div><div class=table-responsive><table class="table table-striped"><tr><th class=form-sort-tab ng-click="usersCtrl.sortBy(\'emailAddress\')" ng-class="{\'active\':usersCtrl.sortType === \'emailAddress\'}">Email Address <span class=carrots ng-if="usersCtrl.sortType === \'emailAddress\'"><i class="fa fa-caret-up fa-3" ng-if=!usersCtrl.reverseSort aria-hidden=true></i> <i class="fa fa-caret-down fa-4" ng-if=usersCtrl.reverseSort aria-hidden=true></i></span></th><th class=form-sort-tab ng-click="usersCtrl.sortBy(\'role\')" ng-class="{\'active\':usersCtrl.sortType === \'role\'}">Role <span class=carrots ng-if="usersCtrl.sortType === \'role\'"><i class="fa fa-caret-up fa-5" ng-if=!usersCtrl.reverseSort aria-hidden=true></i> <i class="fa fa-caret-down fa-6" ng-if=usersCtrl.reverseSort aria-hidden=true></i></span></th><th></th></tr><tr ng-repeat="user in usersCtrl.users | orderBy:usersCtrl.sortType:usersCtrl.reverseSort"><td><span ng-bind=::user.emailAddress></span></td><td><span ng-bind=::user.roleId></span></td><td><a ui-sref="admin.user-form({ id: user._id })" class="btn btn-xs btn-default"><i class="fa fa-pencil"></i>Edit</a></td></tr></table></div>');
+        '<div class=page-header><div class=controls><a class="btn btn-default" ng-if="appCtrl.isAuthorized(\'CREATE_USER\')" ui-sref="admin.user-form({ id: null })" href><i class="fa fa-plus"></i>Add new user</a></div><h1 class=bb-page-heading>Users</h1></div><cc-sortable-table model=usersCtrl.users columns=usersCtrl.sortableTable.columns></cc-sortable-table>');
     $templateCache.put('../public/app/components/back-to-top/back-to-top.html',
         '<div class=back-to-top ng-click=backToTop()><i class="fa fa-angle-double-up"></i></div>');
     $templateCache.put('../public/app/components/breadcrumbs/breadcrumbs.html',
@@ -7304,7 +7408,7 @@ angular.module('capabilities-catalog.templates', []).run(['$templateCache', func
     $templateCache.put('../public/app/components/chart/chart.html',
         '<div class=chart ng-if=::chartCtrl.model.length ng-click=chartCtrl.openModal()><div class=meter style="width:{{:: chartCtrl.model.length * 30 }}px"><div ng-repeat="total in ::chartCtrl.totals track by $index" class="bar {{:: total.class }}" style="width:{{:: total.percentage }}%" tooltip-placement=top tooltip-popup-delay=200 uib-tooltip="{{:: total.model.adoptionStatus.name }} · {{::total.count}} adopting"></div></div></div>');
     $templateCache.put('../public/app/components/forms/login/login-form.html',
-        '<div bb-scroll-into-view=formCtrl.scrollToTop><div ng-if=formCtrl.success class="alert alert-success" ng-bind-html=formCtrl.trustHtml(formCtrl.success)></div><div ng-if=formCtrl.error class="alert alert-danger" ng-bind-html=formCtrl.trustHtml(formCtrl.error)></div><div ng-if=formCtrl.isBlackbaudAuthenticated><button class="btn btn-primary">Login using Blackbaud.com</button></div><form name=loginForm id=form-login class=form-horizontal ng-submit=formCtrl.submit() method=post novalidate><div class=form-group ng-class="{\'has-error\': loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid}"><label class="col-sm-2 control-label">Email Address:</label><div class=col-sm-10><input class=form-control name=emailAddress ng-model=formCtrl.formData.emailAddress placeholder=(required) required><div ng-show="loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid" class=help-block>Email Address is required.</div></div></div><div class=form-group ng-class="{\'has-error\': loginForm.password.$touched && loginForm.password.$invalid}"><label class="col-sm-2 control-label">Password:</label><div class=col-sm-10><input class=form-control type=password name=password ng-model=formCtrl.formData.password placeholder=(required) required><div ng-show="loginForm.password.$touched && loginForm.password.$invalid" class=help-block>Password is required.</div></div></div><div class="form-group form-buttons"><div class="col-sm-offset-2 col-sm-10"><button class="btn btn-primary btn-lg" id=login-form-button type=submit ng-disabled=loginForm.$invalid><i class="fa fa-login"></i>Log In</button></div></div><div class="pull-right reset-request-text"><span>Forgot password?</span> <a ui-sref="reset-password({token: null})">Request reset</a></div></form></div>');
+        '<div bb-scroll-into-view=formCtrl.scrollToTop><div ng-if=formCtrl.success class="alert alert-success" ng-bind-html=formCtrl.trustHtml(formCtrl.success)></div><div ng-if=formCtrl.error class="alert alert-danger" ng-bind-html=formCtrl.trustHtml(formCtrl.error)></div><div ng-if=formCtrl.isBlackbaudAuthenticated><button class="btn btn-primary">Login using Blackbaud.com</button></div><form name=loginForm id=form-login class=form-horizontal ng-submit=formCtrl.submit() method=post novalidate><div class=form-group ng-class="{\'has-error\': loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid}"><label class="col-sm-2 control-label">Email Address:</label><div class=col-sm-10><input class=form-control id=email-address name=emailAddress ng-model=formCtrl.formData.emailAddress placeholder=(required) required><div ng-show="loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid" class=help-block>Email Address is required.</div></div></div><div class=form-group ng-class="{\'has-error\': loginForm.password.$touched && loginForm.password.$invalid}"><label class="col-sm-2 control-label">Password:</label><div class=col-sm-10><input class=form-control type=password name=password ng-model=formCtrl.formData.password placeholder=(required) required><div ng-show="loginForm.password.$touched && loginForm.password.$invalid" class=help-block>Password is required.</div></div></div><div class="form-group form-buttons"><div class="col-sm-offset-2 col-sm-10"><button class="btn btn-primary btn-lg" id=login-form-button type=submit ng-disabled=loginForm.$invalid><i class="fa fa-login"></i>Log In</button></div></div><div class="pull-right reset-request-text"><span>Forgot password?</span> <a ui-sref="reset-password({token: null})">Request reset</a></div></form></div>');
     $templateCache.put('../public/app/components/modals/chart-modal.html',
         '<bb-modal><div class=modal-wrapper><bb-modal-header>{{:: modalCtrl.title }}</bb-modal-header><div class="modal-body modal-table"><div class=table-responsive><table class="table table-striped"><tr ng-repeat="item in ::modalCtrl.model track by $index"><td><h4 ng-bind=::item.name></h4><div><span ng-bind-html=::item.defaultComment></span>&nbsp; <span ng-bind-html=::item.comment></span></div></td><td style="white-space: nowrap"><span class="bullet {{:: item.class }}"></span><span ng-bind=::item.adoptionStatus.name></span></td></tr></table></div></div><bb-modal-footer><button ng-click=$close() class="btn btn-default">Close</button></bb-modal-footer></div></bb-modal>');
     $templateCache.put('../public/app/components/modals/login-modal.html',
@@ -7319,8 +7423,10 @@ angular.module('capabilities-catalog.templates', []).run(['$templateCache', func
         '<div class="section section-info capabilities-catalog" id=section-products><div class=container><header><h2>Products</h2><p class=controls ng-if="::listCtrl.isAuthorized(\'CREATE_PRODUCT_GROUP\')"><a class="btn btn-default" href ui-sref=product-group-form><i class="fa fa-plus"></i>Add Product Group</a></p></header><div class=section-body ng-repeat="productGroup in items track by productGroup._id" ng-if="productGroup.value.length || (listCtrl.isAuthorized(\'CREATE_PRODUCT\') && !hideHeadings)"><header><h3 ng-bind=::productGroup.name></h3><p class=controls ng-if="::listCtrl.isAuthorized(\'CREATE_PRODUCT\')"><a class="btn btn-default btn-sm" href ui-sref="product-group-form(::{ groupId: productGroup._id })" ng-if="::listCtrl.isAuthorized(\'EDIT_PRODUCT_GROUP\') && productGroup._id"><i class="fa fa-pencil"></i>Edit Group</a> <a class="btn btn-default btn-sm" href ui-sref="product-form(::{ groupId: productGroup._id })"><i class="fa fa-plus"></i>Add Product</a></p></header><ul class="meter-list row" ng-sortable=productGroup.sortConfig><li class="meter-list-item col-sm-4" ng-class="::{ draggable: listCtrl.isAuthorized(\'EDIT_PRODUCT:FULL\') }" ng-repeat="product in productGroup.value track by product._id"><div class=featurette><a class=featurette-body href ui-sref="product(::{ productSlug: product.slug })"><h4 class=featurette-title><span ng-bind=::product.name></span></h4><span class=stats><span class=stat ng-bind="::product.adoptees.length + \'&nbsp;services&nbsp;adopted\'"></span> <span ng-if=product.lastUpdated class=stat ng-bind=::product.lastUpdated.formatted.friendly></span></span><div class=controls ng-if="::listCtrl.isAuthorized(\'EDIT_PRODUCT:PARTIAL\')"><button class="btn btn-xs btn-link" ng-click="listCtrl.goto(\'product-form\', { productId: product._id }, $event)"><i class="fa fa-pencil"></i></button></div></a><div class=featurette-footer><cc-chart model=product.adoptees totals=product.totals data-title="::\'Services Adopted by \' + product.name"></cc-chart></div></div></li></ul></div></div></div>');
     $templateCache.put('../public/app/components/product-table/product-table.html',
         '<div class="section section-info capabilities-catalog" id=section-products><div class=container><header><h2>Products</h2><p class=controls ng-if="::appCtrl.isAuthorized(\'CREATE_PRODUCT_GROUP\')"><a class="btn btn-default" href ui-sref=product-group-form><i class="fa fa-plus"></i>Add Product Group</a></p></header><ul class="table-list capability-list"><li class=table-list-item ng-repeat="productGroup in ::listCtrl.products track by productGroup._id" ng-if="::productGroup.products.length || appCtrl.isAuthorized(\'CREATE_PRODUCT\')"><div class=table-list-heading><h3 ng-bind=::productGroup.name></h3><p class=controls ng-if="::appCtrl.isAuthorized(\'CREATE_PRODUCT\')"><a class="btn btn-default btn-sm" href ui-sref="product-group-form(::{ groupId: productGroup._id })" ng-if="::appCtrl.isAuthorized(\'EDIT_PRODUCT_GROUP\') && productGroup._id"><i class="fa fa-pencil"></i>Edit Group</a> <a class="btn btn-default btn-sm" href ui-sref="product-form({ groupId: productGroup._id })"><i class="fa fa-plus"></i>Add Product</a></p></div><div class=table-responsive><table class="table table-striped"><thead><tr><th class=name>Product</th><th class=stats>Capabilities Adopted and Status</th><th ng-if="::appCtrl.isAuthorized(\'EDIT_PRODUCT:PARTIAL\')"></th></tr></thead><tbody ng-sortable=productGroup.sortConfig><tr ng-class="::{ draggable: appCtrl.isAuthorized(\'EDIT_PRODUCT:FULL\') }" ng-repeat="product in productGroup.products track by product._id"><td class=name><h4 ng-bind=::product.name></h4></td><td class=stats><cc-chart model=product.capabilities totals=product.totals data-title="::\'Services Adopted by \' + product.name"></cc-chart></td><td class=controls ng-if="::appCtrl.isAuthorized(\'EDIT_PRODUCT:PARTIAL\')"><bb-context-menu><li><a href ui-sref="product-form(::{ productId: product._id })"><i class="fa fa-pencil"></i> Edit</a></li></bb-context-menu></td></tr></tbody></table></div></li></ul></div></div>');
+    $templateCache.put('../public/app/components/sortable-table/sortable-table.html',
+        '<div class=table-responsive><table class="table table-striped table-sortable"><tr><th ng-repeat="column in sortableCtrl.columns track by $index" ng-class="{\'active\':sortableCtrl.isActiveColumn(column)}"><span ng-if=!sortableCtrl.isOrderable(column) ng-bind=column.name></span> <a ng-if=sortableCtrl.isOrderable(column) href ng-click=sortableCtrl.setOrderBy(column.model)><span ng-bind=column.name></span> <span class=carets ng-if=sortableCtrl.isActiveColumn(column)><i class="fa fa-fw fa-sort-alpha-asc table-sortable-caret" ng-if=!sortableCtrl.ascending aria-hidden=true></i> <i class="fa fa-fw fa-sort-alpha-desc table-sortable-caret" ng-if=sortableCtrl.ascending aria-hidden=true></i></span></a></th></tr><tbody><tr ng-repeat="item in sortableCtrl.model | orderBy:sortableCtrl.orderBy:sortableCtrl.ascending track by $index"><td ng-repeat="column in sortableCtrl.columns track by $index"><span ng-if=column.model ng-bind="sortableCtrl.parseModelFromString(item, column.model)"></span><div ng-if=column.html ng-bind-html=column.html>{{column.html}}</div><div ng-if=column.button><button ng-click=column.button.action(item) class="btn btn-xs btn-default {{column.button.classnames}}" ng-bind-html=column.button.label></button></div></td></tr></tbody></table></div>');
     $templateCache.put('../public/app/components/toasts/toast.html',
-        '<div class=toast-container><div class=toast-message><i ng-if=::toastCtrl.icon class="fa fa-fw {{:: toastCtrl.icon }} toast-icon"></i>{{:: toastCtrl.messageText }}</div><div ng-if=::toastCtrl.linkText class=toast-controls><a class="btn btn-default toast-link" href ng-click=toastCtrl.action()>{{:: toastCtrl.linkText }}</a></div></div>');
+        '<div class=toast-container><div class=toast-message><table class="table table-condensed"><tr><td class=toast-icon><i ng-if=::toastCtrl.icon class="fa fa-2x fa-fw {{:: toastCtrl.icon }}"></i></td><td ng-bind=toastCtrl.messageText></td></tr></table></div><div ng-if=::toastCtrl.linkText class=toast-controls><a class="btn btn-default toast-link" href ng-click=toastCtrl.action()>{{:: toastCtrl.linkText }}</a></div></div>');
 }]);
 
 //# sourceMappingURL=app.js.map

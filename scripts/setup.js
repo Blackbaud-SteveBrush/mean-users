@@ -10,45 +10,37 @@ database = require('../server/database');
 environment = process.env.NODE_ENV || 'development';
 isWin = (process.platform === 'win32');
 
-database.connect(function (uri) {
-    console.log('Database connected to ' + uri);
-});
-
 function resetUsersFromEnv(callback) {
     var admins,
-        adminsPassword,
-        adminPermissionIds,
-        adminsPermissions,
-        AuthService,
+        adminPassword,
         doResetUsers,
         editors,
-        editorsPassword,
-        editorPermissionIds,
-        editorsPermissions,
+        editorPassword,
+        editorPermissions,
+        permissionIds,
         permissions,
         PermissionService,
         RoleService,
         UserService;
 
-    AuthService = require('../server/middleware/auth');
     UserService = require('../server/database/services/user');
     RoleService = require('../server/database/services/role');
     PermissionService = require('../server/database/services/permission');
 
     doResetUsers = (process.env.RESET_USERS_ON_SETUP === true || process.env.RESET_USERS_ON_SETUP === 'true');
-
-    admins = process.env.SITE_ADMINISTRATORS;
-    adminsPassword = process.env.SITE_ADMINISTRATORS_PASSWORD;
-    adminsPermissions = process.env.SITE_ADMINISTRATORS_PERMISSIONS;
-
-    editors = process.env.SITE_EDITORS;
-    editorsPassword = process.env.SITE_EDITORS_PASSWORD;
-    editorsPermissions = process.env.SITE_EDITORS_PERMISSIONS;
     permissions = process.env.SITE_PERMISSIONS;
 
-    adminPermissionIds = [];
-    editorPermissionIds = [];
+    admins = process.env.SITE_ADMINISTRATORS;
+    adminPassword = process.env.SITE_ADMINISTRATORS_PASSWORD;
 
+    editors = process.env.SITE_EDITORS;
+    editorPassword = process.env.SITE_EDITORS_PASSWORD;
+    editorPermissions = (process.env.SITE_EDITORS_PERMISSIONS) ? process.env.SITE_EDITORS_PERMISSIONS.split(',') : [];
+
+    permissionIds = {
+        'editor': [],
+        'admin': []
+    };
 
     if (doResetUsers === false) {
         callback.call();
@@ -57,36 +49,43 @@ function resetUsersFromEnv(callback) {
 
     console.log("Resetting users to defaults...");
 
-    if (!admins || !adminsPassword || !permissions) {
+    if (!admins || !adminPassword || !permissions) {
         console.log("Aborting. Please provide SITE_ADMINISTRATORS, SITE_ADMINISTRATORS_PASSWORD, and SITE_PERMISSIONS in this script's environment.");
         callback.call();
         return;
     }
 
     // Delete all roles.
+    console.log("Deleting roles...");
     RoleService.deleteAll()
 
         // Delete all permissions.
         .then(function () {
+            console.log("Deleting permissions...");
             return PermissionService.deleteAll();
         })
 
         // Delete all users.
         .then(function () {
+            console.log("Deleting users...");
             return UserService.deleteAll();
         })
 
         // Create all permissions
         .then(function () {
+            console.log("Creating default permissions...");
             return new Promise(function (resolve, reject) {
-                var permissionIds = [];
                 async.eachSeries(
                     permissions.split(','),
                     function each(permission, next) {
                         PermissionService.create({
                             name: permission
                         }).then(function (data) {
-                            permissionIds.push(data._id);
+                            if (editorPermissions.indexOf(data.name) > -1) {
+                                permissionIds.editor.push(data._id);
+                            }
+                            permissionIds.admin.push(data._id);
+                            console.log("Permission created: " + data.name);
                             next();
                         }).catch(next);
                     },
@@ -95,91 +94,98 @@ function resetUsersFromEnv(callback) {
                             reject(error);
                             return;
                         }
-                        resolve(permissionIds);
+                        resolve();
                     }
                 );
             });
         })
 
         // Create the admin role.
-        .then(function (permissionIds) {
+        .then(function () {
+            console.log("Creating admin role...");
             return RoleService.create({
                 name: 'admin',
-                _permissions: permissionIds
+                _permissions: permissionIds.admin
             });
         })
 
         // Create admin users.
         .then(function (adminRole) {
-            var emailAddresses;
-            emailAddresses = admins.split(',');
-
             console.log("Creating admin accounts...");
-
-            async.eachSeries(emailAddresses, function each(emailAddress, next) {
-                console.log("Creating admin user for " + emailAddress);
-                AuthService.register(emailAddress, adminsPassword, adminRole._id).then(function (data) {
-                    console.log("AuthService success:", data);
-                    UserService.getAll().then(function (data) {
-                        console.log("USERS", data);
-                        next();
-                    });
-
-                }).catch(next);
-            }, function done(error) {
-                if (error) {
-                    console.log(error);
-                }
-                callback.call();
+            return new Promise(function (resolve, reject) {
+                async.eachSeries(
+                    admins.split(','),
+                    function each(emailAddress, next) {
+                        UserService.register(emailAddress, adminPassword, adminRole._id).then(function () {
+                            console.log("Created admin user for " + emailAddress);
+                            next();
+                        }).catch(next);
+                    },
+                    function done(error) {
+                        if (error) {
+                            reject(error);
+                            return;
+                        }
+                        resolve();
+                    }
+                );
             });
+        })
+
+        // Create the editor role.
+        .then(function () {
+            console.log("Creating editor role...");
+            return RoleService.create({
+                name: 'editor',
+                _permissions: permissionIds.editor,
+                isDefault: true
+            });
+        })
+
+        // Create editor users.
+        .then(function (editorRole) {
+            console.log("Creating editor accounts...");
+            return new Promise(function (resolve, reject) {
+                if (!editors) {
+                    console.log("SITE_EDITORS not defined.");
+                    return resolve();
+                }
+                async.eachSeries(
+                    editors.split(','),
+                    function each(emailAddress, next) {
+                        UserService.register(emailAddress, editorPassword, editorRole._id).then(function () {
+                            console.log("Created editor user for " + emailAddress);
+                            next();
+                        }).catch(next);
+                    },
+                    function done(error) {
+                        if (error) {
+                            reject(error);
+                            return;
+                        }
+                        resolve();
+                    }
+                );
+            });
+        })
+
+        // All done!
+        .then(callback)
+        .catch(function (error) {
+            console.log("ERROR with resetUsersFromEnv:", error);
+            process.exit();
         });
-
-
-
-
-    //     // Create the admin and editor roles
-    //     return Promise.all([
-    //         RoleService.create({
-    //             name: 'admin',
-    //             permissions: []
-    //         }),
-    //         RoleService.create({
-    //             name: 'editor',
-    //             isDefault: true,
-    //             permissions: []
-    //         })
-    //     ]);
-    // }).then(function () {
-    //     return UserService.deleteAll();
-    // }).then(function () {
-    //     var emailAddresses;
-    //
-    //     emailAddresses = admins.split(',');
-    //
-    //     console.log("All users removed from database.");
-    //     console.log("Creating admin accounts...");
-    //
-    //     async.eachSeries(emailAddresses, function each(emailAddress, next) {
-    //         console.log("Creating admin user for " + emailAddress);
-    //         AuthService.register(emailAddress, adminsPassword, 'admin').then(function (data) {
-    //             console.log("AuthService success:", data);
-    //             next();
-    //         }).catch(next);
-    //     }, function done(error) {
-    //         if (error) {
-    //             console.log(error);
-    //         }
-    //         callback.call();
-    //     });
-    // });
 }
 
 console.log('Setting up ' + environment + ' environment...');
-if (environment === 'production') {
-    process.exit();
-} else {
-    resetUsersFromEnv(function () {
-        console.log("Setup complete!");
+database.connect(function (uri) {
+    console.log('Database connected to ' + uri);
+    if (environment === 'production') {
         process.exit();
-    });
-}
+    } else {
+        resetUsersFromEnv(function () {
+            console.log("Setup complete!");
+            process.exit();
+        });
+    }
+});

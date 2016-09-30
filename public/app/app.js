@@ -35,8 +35,10 @@
                 url: '/profile',
                 templateUrl: '../public/app/views/profile.html',
                 controller: 'ProfileController as profileCtrl',
-                restrictions: {
-                    role: 'editor'
+                data: {
+                    restrictions: {
+                        role: 'editor'
+                    }
                 }
             })
             .state('admin', {
@@ -71,9 +73,16 @@
             });
     }
 
-    function Run($rootScope, $state, AuthService, MessageService) {
+    function Run($rootScope, $state, $window, AuthService, MessageService) {
+        var bypass;
+        bypass = false;
         // Restrict routes to roles and permissions.
-        $rootScope.$on('$stateChangeStart', function (e, toState) {
+        $rootScope.$on('$stateChangeStart', function (e, toState, toParams) {
+            if (bypass || toState.name === 'login') {
+                bypass = false;
+                return;
+            }
+            e.preventDefault();
             AuthService
                 .getUserStatus()
                 .then(function (data) {
@@ -81,11 +90,17 @@
                     if (toState.data.restrictions) {
                         toState.data.restrictions = toState.data.restrictions || {};
                         if (!data.isLoggedIn || AuthService.isAuthorized(toState.data.restrictions.permission) === false || AuthService.isRole(toState.data.restrictions.role) === false) {
-                            e.preventDefault();
                             MessageService.error("You are not authorized to view that page.");
-                            $state.go('login');
+                            $state.go('login', {}, {
+                                reload: true,
+                                notify: false
+                            });
+                            $window.location.reload();
+                            return;
                         }
                     }
+                    bypass = true;
+                    $state.go(toState, toParams);
                 });
         });
 
@@ -95,29 +110,41 @@
                 name: fromState.name,
                 params: fromParams
             };
+            $rootScope.$broadcast('ccAuthorizationSuccess');
         });
     }
 
-    function AppController(AuthService) {
+    function AppController($scope, AuthService) {
         var vm;
         vm = this;
         vm.isLoggedIn = AuthService.isLoggedIn;
         vm.isAuthorized = AuthService.isAuthorized;
+        $scope.$on('ccAuthorizationSuccess', function () {
+            vm.isReady = true;
+        });
     }
 
-    ConfigRoutes.$inject = ['$stateProvider', '$urlRouterProvider'];
+    ConfigRoutes.$inject = [
+        '$stateProvider',
+        '$urlRouterProvider'
+    ];
     Run.$inject = [
         '$rootScope',
         '$state',
+        '$window',
         'AuthService',
         'MessageService'
     ];
-    AppController.$inject = ['AuthService'];
+    AppController.$inject = [
+        '$scope',
+        'AuthService'
+    ];
 
     angular.module('capabilities-catalog', [
         'sky',
         'ui.router',
-        'capabilities-catalog.templates'
+        'capabilities-catalog.templates',
+        'ngSanitize'
     ])
         .config(ConfigRoutes)
         .run(Run)

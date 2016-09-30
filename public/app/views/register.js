@@ -6,19 +6,14 @@
 
         vm = this;
         vm.formData = {};
+
         vm.submit = function () {
-            vm.disabled = true;
             AuthService
                 .register(vm.formData)
                 .then(function () {
                     $state.go('login');
-                    vm.disabled = false;
                 })
-                .catch(function (error) {
-                    MessageService.handleError(error);
-                    vm.formData = {};
-                    vm.disabled = false;
-                });
+                .catch(MessageService.handleError);
         };
     }
 

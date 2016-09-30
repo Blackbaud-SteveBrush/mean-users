@@ -10,6 +10,10 @@
         service = this;
         user = null;
 
+        service.getUser = function () {
+            return user;
+        };
+
         service.getUserStatus = function () {
             var deferred;
 
@@ -44,7 +48,6 @@
             if (user === null) {
                 return false;
             }
-            console.log("isAuthorized", user.role);
             if (user.role === 'admin') {
                 return true;
             }
@@ -58,7 +61,10 @@
             if (user === null) {
                 return false;
             }
-            return user.role === role;
+            if (user.role === 'admin') {
+                return true;
+            }
+            return (user.role === role);
         };
 
         service.login = function (emailAddress, password) {

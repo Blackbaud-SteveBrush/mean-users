@@ -1,5 +1,4 @@
-var AuthService,
-    async,
+var async,
     express,
     passport,
     router,
@@ -13,14 +12,13 @@ async = require('async');
 express = require('express');
 passport = require('passport');
 User = require('../database/models/user');
-AuthService = require(__dirname + '/auth');
 PermissionService = require('../database/services/permission');
 RoleService = require('../database/services/role');
 UserService = require('../database/services/user');
 utils = require('../libs/utils');
 router = express.Router();
 
-AuthService.addRoutes(router);
+require(__dirname + '/auth')(router);
 
 router.get('/', function (req, res) {
     res.render('index', {

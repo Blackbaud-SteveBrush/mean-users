@@ -1,1 +1,27 @@
-Profile
+<h1>My Profile</h1>
+<table class="table table-striped">
+  <tr>
+    <td style="width:25%">
+      Email Address
+    </td>
+    <td>
+      <i class="fa fa-fw fa-envelope"></i> <span ng-bind="profileCtrl.user.emailAddress"></span>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      ID
+    </td>
+    <td>
+      <i class="fa fa-fw fa-user"></i> <span ng-bind="profileCtrl.user._id"></span>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      Role
+    </td>
+    <td>
+      <i class="fa fa-fw fa-certificate"></i> <span ng-bind="profileCtrl.user.role"></span>
+    </td>
+  </tr>
+</table>

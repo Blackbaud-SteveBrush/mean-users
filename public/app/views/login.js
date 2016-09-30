@@ -7,20 +7,16 @@
         vm.redirect = function () {
             var params,
                 state;
+
             state = $state.previous.name;
             params = $state.previous.params;
+
             if (!state || state === 'login') {
                 state = 'home';
                 params = {};
             }
-            $state.go(
-                state,
-                params,
-                {
-                    reload: true
-                }
-            );
-            $window.location.reload();
+            $state.go(state, params, { reload: true, notify: false });
+            $window.location.reload(true);
         };
     }
 

@@ -11,14 +11,7 @@ function Service(options) {
 Service.prototype.getDefault = function () {
     return this.settings.model.findOne({
         'isDefault': true
-    }).exec().then(function (error, doc) {
-        if (error) {
-            return Promise.reject(error);
-        }
-        if (!doc) {
-            return Promise.reject("Default role not found!");
-        }
-    });
+    }).exec();
 };
 
 Service.prototype.getByName = function (name) {
@@ -34,24 +27,26 @@ Service.prototype.getByName = function (name) {
     });
 };
 
-Service.prototype.onBeforeUpdate = function (data) {
-    var foundIds,
-        PermissionService;
+Service.prototype.hooks = {
+    onBeforeUpdate: function (data) {
+        var foundIds,
+            PermissionService;
 
-    foundIds = [];
-    PermissionService = require(__dirname + '/permission');
+        foundIds = [];
+        PermissionService = require(__dirname + '/permission');
 
-    // Make sure existing permissions are valid before update.
-    return PermissionService.getAll().then(function (permissions) {
-        permissions.forEach(function (permission) {
-            data.permissions.forEach(function (permissionId) {
-                if (permission._id.equals(permissionId)) {
-                    foundIds.push(permissionId);
-                }
+        // Make sure existing permissions are valid before update.
+        return PermissionService.getAll().then(function (permissions) {
+            permissions.forEach(function (permission) {
+                data.permissions.forEach(function (permissionId) {
+                    if (permission._id.equals(permissionId)) {
+                        foundIds.push(permissionId);
+                    }
+                });
             });
+            data.permissions = foundIds;
         });
-        data.permissions = foundIds;
-    });
+    }
 };
 
 utils.mixin(Service, DatabaseObject);

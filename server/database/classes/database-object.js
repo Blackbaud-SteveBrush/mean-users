@@ -6,43 +6,61 @@ function DatabaseObject(options) {
     var defaults,
         self;
 
-    defaults = {};
     self = this;
+    self.hooks = {};
+    defaults = {};
     self.settings = merge.recursive(true, defaults, options || {});
+}
 
-    self.create = function (data) {
-        var newDocument;
+DatabaseObject.prototype = {
+    create: function (data) {
+        var newDocument,
+            self;
+
+        self = this;
         newDocument = new self.settings.model(data);
+
+        if (typeof self.hooks.onAfterCreate === 'function') {
+            return self.hooks.onAfterCreate(data).then(function () {
+                return newDocument.save.exec();
+            });
+        }
+
         return newDocument.save();
-    };
-
-    self.deleteAll = function () {
-        return self.settings.model.remove({}).exec();
-    };
-
-    self.deleteById = function (id) {
-        return self.settings.model.findOneAndRemove({
+    },
+    deleteAll: function () {
+        var self;
+        self = this;
+        return self.settings.model.remove({}).exec().then(new Promise(function (resolve, reject) {
+            self.settings.model.collection.dropAllIndexes(function (error) {
+                if (error) {
+                    return reject(error);
+                }
+                return resolve();
+            });
+        }));
+    },
+    deleteById: function (id) {
+        return this.settings.model.findOneAndRemove({
             _id: id
         }).exec();
-    };
-
-    self.getAll = function () {
-        return self.settings.model.find({}).exec();
-    };
-
-    self.getById = function (id) {
-        return self.settings.model.findOne({
+    },
+    getAll: function () {
+        return this.settings.model.find({}).exec();
+    },
+    getById: function (id) {
+        return this.settings.model.findOne({
             _id: id
         }).exec();
-    };
-
-    self.getByIds = function (ids) {
-        return self.settings.model.find({
+    },
+    getByIds: function (ids) {
+        return this.settings.model.find({
             '_id': { $in: ids }
         }).exec();
-    };
-
-    self.updateById = function (id, data) {
+    },
+    updateById: function (id, data) {
+        var self;
+        self = this;
         function update() {
             return self.getById(id).then(function (doc) {
                 var k;
@@ -54,11 +72,11 @@ function DatabaseObject(options) {
                 return doc.save();
             });
         }
-        if (typeof self.onBeforeUpdate === 'function') {
-            return self.onBeforeUpdate(data).then(update);
+        if (typeof self.hooks.onBeforeUpdate === 'function') {
+            return self.hooks.onBeforeUpdate(data).then(update);
         }
         return update();
-    };
-}
+    }
+};
 
 module.exports = DatabaseObject;

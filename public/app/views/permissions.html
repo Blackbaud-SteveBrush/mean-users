@@ -21,7 +21,7 @@
     </th>
     <th></th>
   </tr>
-  <tr ng-repeat="permission in permissionsCtrl.permissions">
+  <tr ng-repeat="permission in permissionsCtrl.permissions | orderBy:'name':false track by $index">
     <td>
       <form ng-if="permission.showEditor" ng-submit="permissionsCtrl.update(permission)">
         <div class="form-group">

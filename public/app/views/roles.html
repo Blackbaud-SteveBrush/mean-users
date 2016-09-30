@@ -45,7 +45,7 @@
       </form>
     </td>
     <td>
-      <label><input type="checkbox" ng-checked="role.isDefault" ng-click="rolesCtrl.updateDefaultRole($index)"> Default</label>
+      <label><input ng-disabled="role.name === 'admin'" type="checkbox" ng-checked="role.isDefault" ng-click="rolesCtrl.updateDefaultRole($index)"> Default</label>
     </td>
     <td>
       <button class="btn btn-xs btn-default" ng-click="rolesCtrl.delete($index)"><i class="fa fa-trash"></i>Delete</button>

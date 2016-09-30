@@ -1,8 +1,23 @@
 a.toast-link {
-    font-size: 1em;
-    font-weight: bold;
+  font-size: 1em;
+  font-weight: bold;
+  color: black;
+  &:hover {
     color: black;
-    &:hover {
-        color: black;
-    };
-};
+  }
+}
+
+.toast-message {
+  .table {
+    background-color: transparent;
+    margin: 0;
+
+    td,
+    th {
+      border: 0 none;
+    }
+    td.toast-icon {
+      max-width: 1%;
+    }
+  }
+}

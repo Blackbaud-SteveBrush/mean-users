@@ -1,42 +1,46 @@
 (function (angular) {
   'use strict';
 
-  function UsersController(MessageService, UserService) {
+  function UsersController($state, MessageService, UserService) {
         var vm;
 
         vm = this;
-
-        vm.sortType = 'emailAddress';
-        vm.reverseSort = false;
-
-        vm.sortBy = function (propertyName) {
-            if (vm.sortType === propertyName) {
-                vm.toggleReverse();
-            }
-            vm.sortType = propertyName;
-        };
-
-        vm.toggleReverse = function () {
-            if (vm.reverseSort) {
-                vm.reverseSort = false;
-            } else {
-                vm.reverseSort = true;
-            }
+        vm.sortableTable = {
+            columns: [
+                {
+                    name: 'Email Address',
+                    model: 'emailAddress'
+                },
+                {
+                    name: 'Role',
+                    model: '_role.name'
+                },
+                {
+                    name: '',
+                    button: {
+                        action: function (item) {
+                            $state.go('admin.user-form', { id: item._id });
+                        },
+                        label: '<i class="fa fa-pencil"></i>Edit'
+                    }
+                }
+            ]
         };
 
         UserService
             .getAll()
             .then(function (data) {
                 vm.users = data.value;
-                vm.isReady = true;
             }).catch(MessageService.handleError);
     }
 
     UsersController.$inject = [
+        '$state',
         'MessageService',
         'UserService'
     ];
 
     angular.module('capabilities-catalog')
         .controller('UsersController', UsersController);
+
 }(window.angular));

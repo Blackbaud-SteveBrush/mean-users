@@ -6,14 +6,31 @@
 
         vm = this;
         vm.isAuthorized = AuthService.isAuthorized;
-        vm.isAuthenticated = AuthService.isAuthenticated;
-        vm.isVisible = vm.isAuthorized('CREATE_USER');
+
+        function handleResponse(data) {
+            if (vm.formData._id) {
+                MessageService.handleSuccess({
+                    messageText: 'User successfully updated.',
+                    link: 'admin.users',
+                    linkText: 'View all'
+                });
+            } else {
+                MessageService.handleSuccess({
+                    messageText: 'User successfully created.',
+                    link: 'admin.users',
+                    linkText: 'View all'
+                });
+            }
+            vm.formData = data;
+        }
 
         vm.delete = function () {
             UserService
                 .deleteById($state.params.id)
                 .then(function () {
-                    $state.go('admin.users');
+                    $state.go('admin.users', {}, {
+                        reload: true
+                    });
                     MessageService.handleSuccess('User deleted!');
                 })
                 .catch(MessageService.handleError);
@@ -27,52 +44,27 @@
                 .catch(MessageService.handleError);
         };
 
+        vm.isSelected = function (role) {
+            if (!vm.formData || vm.formData._role === role._id) {
+                return true;
+            }
+            return (role.isDefault === true);
+        };
+
         vm.submit = function () {
-            vm.scrollToTop = false;
-            vm.waiting = true;
             if (vm.formData._id) {
                 UserService
                     .updateById($state.params.id, vm.formData)
                     .then(handleResponse)
-                    .catch(MessageService.handleError)
-                    .then(function () {
-                        vm.waiting = false;
-                    });
+                    .catch(MessageService.handleError);
             } else {
                 UserService
                     .create(vm.formData)
                     .then(handleResponse)
-                    .catch(MessageService.handleError)
-                    .then(function () {
-                        vm.waiting = false;
-                    });
+                    .catch(MessageService.handleError);
             }
         };
 
-        function handleResponse(data) {
-            vm.waiting = false;
-            if (vm.formData._id) {
-                MessageService.handleSuccess({
-                    messageText: data.emailAddress + ' user updated!',
-                    link: 'admin.users',
-                    linkText: 'View all'
-                });
-            } else {
-                MessageService.handleSuccess({
-                    messageText: data.emailAddress + ' user created!',
-                    link: 'admin.users',
-                    linkText: 'View all'
-                });
-            }
-            vm.formData = data;
-            vm.scrollToTop = true;
-        }
-
-        /**
-        * This runs on page load, populates our role drop down menu, and attempts to grab a
-        * user from the server based on the $state.params.id in our address.   If no params exist
-        * our service catches it and returns a promised empty {data: {}} for our form data.
-        */
         RoleService
             .getAll()
             .then(function (data) {
@@ -81,8 +73,6 @@
             })
             .then(function (data) {
                 vm.formData = data;
-                vm.isReady = true;
-                vm.resetPassphrase = false;
             })
             .catch(MessageService.handleError);
     }
@@ -99,4 +89,5 @@
 
     angular.module('capabilities-catalog')
         .controller('UserFormController', UserFormController);
+
 }(window.angular));

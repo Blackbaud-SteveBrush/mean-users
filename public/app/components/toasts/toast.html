@@ -1,5 +1,14 @@
 <div class="toast-container">
-  <div class="toast-message"><i ng-if="::toastCtrl.icon" class="fa fa-fw {{:: toastCtrl.icon }} toast-icon"></i>{{:: toastCtrl.messageText }}</div>
+  <div class="toast-message">
+    <table class="table table-condensed">
+      <tr>
+        <td class="toast-icon">
+          <i ng-if="::toastCtrl.icon" class="fa fa-2x fa-fw {{:: toastCtrl.icon }}"></i>
+        </td>
+        <td ng-bind="toastCtrl.messageText"></td>
+      </tr>
+    </table>
+  </div>
   <div ng-if="::toastCtrl.linkText" class="toast-controls">
     <a class="btn btn-default toast-link" href ng-click="toastCtrl.action()">{{:: toastCtrl.linkText }}</a>
   </div>
