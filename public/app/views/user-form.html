@@ -1,3 +1,4 @@
+
 <div class="page-header">
   <h1 ng-if="userFormCtrl.formData._id">Edit User</h1>
   <h1 ng-if="!userFormCtrl.formData._id">New User Registration</h1>
@@ -38,11 +39,11 @@
     </div>
   </div>
   <div class="col-md-3 col-sm-2 form-group">
-    <button ng-if="userFormCtrl.formData._id" class="btn btn-primary btn-block" type="submit" ng-disabled="register-form.$invalid || userFormCtrl.waiting"><i class="fa fa-save"></i>Save</button>
-    <button ng-if="!userFormCtrl.formData._id" class="btn btn-primary btn-block" type="submit" ng-disabled="register-form.$invalid || userFormCtrl.waiting"><i class="fa fa-plus"></i>Create</button>
-    <button ng-if="::userFormCtrl.formData._id && appCtrl.isAuthorized('DELETE_ADOPTION_STATUS')" class="btn btn-danger btn-block" type="button" cc-confirm-click="Are you sure you want to DELETE {{userFormCtrl.formData.emailAddress}}" data-confirmed-click="userFormCtrl.delete()"><i class="fa fa-trash"></i>Delete</button>
+    <button ng-if="userFormCtrl.formData._id" class="btn btn-primary btn-block" type="button" ng-disabled="register-form.$invalid" cc-confirm-click="Are you sure you want to edit {{userFormCtrl.formData.emailAddress}}? This user's session will be deleted and they will be asked to login again." data-confirmed-click="userFormCtrl.submit()"><i class="fa fa-save"></i>Save</button>
+    <button ng-if="!userFormCtrl.formData._id" class="btn btn-primary btn-block" type="submit" ng-disabled="register-form.$invalid"><i class="fa fa-plus"></i>Create</button>
+    <button ng-if="::userFormCtrl.formData._id && appCtrl.isAuthorized('DELETE_USER')" class="btn btn-danger btn-block" type="button" cc-confirm-click="Are you sure you want to DELETE {{userFormCtrl.formData.emailAddress}}?" data-confirmed-click="userFormCtrl.deleteUser()"><i class="fa fa-trash"></i>Delete</button>
   </div>
   <div class="col-md-3 col-sm-2 form-group">
-    <button ng-if="userFormCtrl.formData._id" class="btn btn-default btn-block" type="button" ng-click="userFormCtrl.requestReset()" ng-disabled="userFormCtrl.waiting" cc-confirm-click="Are you sure you want to request a passphrase reset for {{userFormCtrl.formData.emailAddress}}?"><i class="fa fa-refresh" aria-hidden="true"></i>Reset Passphrase</button>
+    <button ng-if="userFormCtrl.formData._id" class="btn btn-default btn-block" type="button" cc-confirm-click="Are you sure you want to request a password reset for {{userFormCtrl.formData.emailAddress}}?" data-confirmed-click="userFormCtrl.sendResetPasswordRequest()"><i class="fa fa-refresh" aria-hidden="true"></i>Reset Password</button>
   </div>
 </form>

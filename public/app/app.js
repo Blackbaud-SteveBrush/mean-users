@@ -1,6 +1,12 @@
 (function (angular) {
     'use strict';
 
+    function ConfigOmnibar(bbOmnibarConfig) {
+        bbOmnibarConfig.serviceName = 'Service Catalog';
+        bbOmnibarConfig.signInRedirectUrl = window.location.href;
+        bbOmnibarConfig.url = 'https://signin.blackbaud.com/omnibar.min.js';
+    }
+
     function ConfigRoutes($stateProvider, $urlRouterProvider) {
         $urlRouterProvider
             .otherwise('/');
@@ -19,10 +25,11 @@
             .state('logout', {
                 url: '/logout',
                 template: '',
-                controller: ['$state', '$window', 'AuthService', function ($state, $window, AuthService) {
+                controller: ['$state', 'AuthService', function ($state, AuthService) {
                     AuthService.logout().then(function () {
-                        $state.go('login');
-                        $window.location.reload();
+                        $state.go('login', {}, {
+                            reload: true
+                        });
                     });
                 }]
             })
@@ -30,6 +37,11 @@
                 url: '/register',
                 templateUrl: '../public/app/views/register.html',
                 controller: 'RegisterController as registerCtrl'
+            })
+            .state('reset-password', {
+                url: '/reset-password/:token',
+                templateUrl: '../public/app/views/reset-password.html',
+                controller: 'ResetPasswordController as resetPasswordCtrl'
             })
             .state('profile', {
                 url: '/profile',
@@ -40,6 +52,11 @@
                         role: 'editor'
                     }
                 }
+            })
+            .state('oauth', {
+                url: '/id_token:idToken',
+                template: '',
+                controller: 'TokenController'
             })
             .state('admin', {
                 url: '/admin',
@@ -52,7 +69,7 @@
                 }
             })
             .state('admin.user-form', {
-                url: '/edit/:id',
+                url: '/user/edit/:id',
                 templateUrl: '../public/app/views/user-form.html',
                 controller: 'UserFormController as userFormCtrl'
             })
@@ -73,35 +90,44 @@
             });
     }
 
-    function Run($rootScope, $state, $window, AuthService, MessageService) {
+    function ConfigSession(localStorageServiceProvider) {
+        localStorageServiceProvider
+            .setPrefix('serviceCatalog')
+            .setStorageType('sessionStorage');
+    }
+
+    function Run($rootScope, $state, $window, AuthService, bbOmnibarConfig, MessageService) {
         var bypass;
+
         bypass = false;
+
         // Restrict routes to roles and permissions.
         $rootScope.$on('$stateChangeStart', function (e, toState, toParams) {
             if (bypass || toState.name === 'login') {
                 bypass = false;
                 return;
             }
+
             e.preventDefault();
+
             AuthService
                 .getUserStatus()
                 .then(function (data) {
                     toState.data = toState.data || {};
+
                     if (toState.data.restrictions) {
                         toState.data.restrictions = toState.data.restrictions || {};
+
                         if (!data.isLoggedIn || AuthService.isAuthorized(toState.data.restrictions.permission) === false || AuthService.isRole(toState.data.restrictions.role) === false) {
                             MessageService.error("You are not authorized to view that page.");
-                            $state.go('login', {}, {
-                                reload: true,
-                                notify: false
-                            });
-                            $window.location.reload();
+                            $state.go('login', {}, { reload: true });
                             return;
                         }
                     }
+
                     bypass = true;
                     $state.go(toState, toParams);
-                });
+                }).catch(MessageService.handleError);
         });
 
         // Store the previous state, for login redirects.
@@ -112,42 +138,51 @@
             };
             $rootScope.$broadcast('ccAuthorizationSuccess');
         });
+
+        bbOmnibarConfig.userLoaded = function (data) {
+            angular.element(document).ready(function () {
+                $rootScope.$broadcast('omnibarUserLoaded', data);
+            });
+        };
     }
 
-    function AppController($scope, AuthService) {
-        var vm;
-        vm = this;
-        vm.isLoggedIn = AuthService.isLoggedIn;
-        vm.isAuthorized = AuthService.isAuthorized;
-        $scope.$on('ccAuthorizationSuccess', function () {
-            vm.isReady = true;
-        });
-    }
+    ConfigOmnibar.$inject = [
+        'bbOmnibarConfig'
+    ];
 
     ConfigRoutes.$inject = [
         '$stateProvider',
         '$urlRouterProvider'
     ];
+
+    ConfigSession.$inject = [
+        'localStorageServiceProvider'
+    ];
+
     Run.$inject = [
         '$rootScope',
         '$state',
         '$window',
         'AuthService',
+        'bbOmnibarConfig',
         'MessageService'
-    ];
-    AppController.$inject = [
-        '$scope',
-        'AuthService'
     ];
 
     angular.module('capabilities-catalog', [
         'sky',
         'ui.router',
         'capabilities-catalog.templates',
+        'LocalStorageModule',
         'ngSanitize'
     ])
+        .config(ConfigOmnibar)
         .config(ConfigRoutes)
-        .run(Run)
-        .controller('AppController', AppController);
+        .run(Run);
+
+        // Disabling this feature until ng-sortable gets their crap together:
+        // https://github.com/RubaXa/Sortable/issues/865
+        // .config(['$compileProvider', function ($compileProvider) {
+        //     $compileProvider.debugInfoEnabled(false);
+        // }]);
 
 }(window.angular));

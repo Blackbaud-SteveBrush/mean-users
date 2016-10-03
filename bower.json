@@ -19,7 +19,7 @@
     "angular": "^1.5.0",
     "angular-ui-router": "^0.2.18",
     "angular-sanitize": "^1.5.1",
-    "angular-local-storage": "^0.2.7",
+    "angular-local-storage": "^0.5.2",
     "bootstrap-markdown": "git://github.com/toopay/bootstrap-markdown.git",
     "to-markdown": "git://github.com/domchristie/to-markdown.git",
     "marked": "git://github.com/cadorn/marked.git",

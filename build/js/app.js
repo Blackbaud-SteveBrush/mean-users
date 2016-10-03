@@ -5840,15 +5840,560 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
 /**
  * An Angular module that gives you access to the browsers local storage
- * @version v0.2.6 - 2016-03-16
+ * @version v0.5.1 - 2016-09-27
  * @link https://github.com/grevory/angular-local-storage
  * @author grevory <greg@gregpike.ca>
  * @license MIT License, http://www.opensource.org/licenses/MIT
  */
-!function(a,b){var c=b.isDefined,d=b.isUndefined,e=b.isNumber,f=b.isObject,g=b.isArray,h=b.extend,i=b.toJson;b.module("LocalStorageModule",[]).provider("localStorageService",function(){this.prefix="ls",this.storageType="localStorage",this.cookie={expiry:30,path:"/"},this.notify={setItem:!0,removeItem:!1},this.setPrefix=function(a){return this.prefix=a,this},this.setStorageType=function(a){return this.storageType=a,this},this.setStorageCookie=function(a,b){return this.cookie.expiry=a,this.cookie.path=b,this},this.setStorageCookieDomain=function(a){return this.cookie.domain=a,this},this.setNotify=function(a,b){return this.notify={setItem:a,removeItem:b},this},this.$get=["$rootScope","$window","$document","$parse",function(a,b,j,k){var l,m=this,n=m.prefix,o=m.cookie,p=m.notify,q=m.storageType;j?j[0]&&(j=j[0]):j=document,"."!==n.substr(-1)&&(n=n?n+".":"");var r=function(a){return n+a},s=function(){try{var c=q in b&&null!==b[q],d=r("__"+Math.round(1e7*Math.random()));return c&&(l=b[q],l.setItem(d,""),l.removeItem(d)),c}catch(e){return q="cookie",a.$broadcast("LocalStorageModule.notification.error",e.message),!1}}(),t=function(b,c){if(c=d(c)?null:i(c),!s||"cookie"===m.storageType)return s||a.$broadcast("LocalStorageModule.notification.warning","LOCAL_STORAGE_NOT_SUPPORTED"),p.setItem&&a.$broadcast("LocalStorageModule.notification.setitem",{key:b,newvalue:c,storageType:"cookie"}),z(b,c);try{l&&l.setItem(r(b),c),p.setItem&&a.$broadcast("LocalStorageModule.notification.setitem",{key:b,newvalue:c,storageType:m.storageType})}catch(e){return a.$broadcast("LocalStorageModule.notification.error",e.message),z(b,c)}return!0},u=function(b){if(!s||"cookie"===m.storageType)return s||a.$broadcast("LocalStorageModule.notification.warning","LOCAL_STORAGE_NOT_SUPPORTED"),A(b);var c=l?l.getItem(r(b)):null;if(!c||"null"===c)return null;try{return JSON.parse(c)}catch(d){return c}},v=function(){var b,c;for(b=0;b<arguments.length;b++)if(c=arguments[b],s&&"cookie"!==m.storageType)try{l.removeItem(r(c)),p.removeItem&&a.$broadcast("LocalStorageModule.notification.removeitem",{key:c,storageType:m.storageType})}catch(d){a.$broadcast("LocalStorageModule.notification.error",d.message),B(c)}else s||a.$broadcast("LocalStorageModule.notification.warning","LOCAL_STORAGE_NOT_SUPPORTED"),p.removeItem&&a.$broadcast("LocalStorageModule.notification.removeitem",{key:c,storageType:"cookie"}),B(c)},w=function(){if(!s)return a.$broadcast("LocalStorageModule.notification.warning","LOCAL_STORAGE_NOT_SUPPORTED"),[];var b=n.length,c=[];for(var d in l)if(d.substr(0,b)===n)try{c.push(d.substr(b))}catch(e){return a.$broadcast("LocalStorageModule.notification.error",e.Description),[]}return c},x=function(b){var c=n?new RegExp("^"+n):new RegExp,d=b?new RegExp(b):new RegExp;if(!s||"cookie"===m.storageType)return s||a.$broadcast("LocalStorageModule.notification.warning","LOCAL_STORAGE_NOT_SUPPORTED"),C();var e=n.length;for(var f in l)if(c.test(f)&&d.test(f.substr(e)))try{v(f.substr(e))}catch(g){return a.$broadcast("LocalStorageModule.notification.error",g.message),C()}return!0},y=function(){try{return b.navigator.cookieEnabled||"cookie"in j&&(j.cookie.length>0||(j.cookie="test").indexOf.call(j.cookie,"test")>-1)}catch(c){return a.$broadcast("LocalStorageModule.notification.error",c.message),!1}}(),z=function(b,c,h){if(d(c))return!1;if((g(c)||f(c))&&(c=i(c)),!y)return a.$broadcast("LocalStorageModule.notification.error","COOKIES_NOT_SUPPORTED"),!1;try{var k="",l=new Date,m="";if(null===c?(l.setTime(l.getTime()+-864e5),k="; expires="+l.toGMTString(),c=""):e(h)&&0!==h?(l.setTime(l.getTime()+24*h*60*60*1e3),k="; expires="+l.toGMTString()):0!==o.expiry&&(l.setTime(l.getTime()+24*o.expiry*60*60*1e3),k="; expires="+l.toGMTString()),b){var n="; path="+o.path;o.domain&&(m="; domain="+o.domain),j.cookie=r(b)+"="+encodeURIComponent(c)+k+n+m}}catch(p){return a.$broadcast("LocalStorageModule.notification.error",p.message),!1}return!0},A=function(b){if(!y)return a.$broadcast("LocalStorageModule.notification.error","COOKIES_NOT_SUPPORTED"),!1;for(var c=j.cookie&&j.cookie.split(";")||[],d=0;d<c.length;d++){for(var e=c[d];" "===e.charAt(0);)e=e.substring(1,e.length);if(0===e.indexOf(r(b)+"=")){var f=decodeURIComponent(e.substring(n.length+b.length+1,e.length));try{return JSON.parse(f)}catch(g){return f}}}return null},B=function(a){z(a,null)},C=function(){for(var a=null,b=n.length,c=j.cookie.split(";"),d=0;d<c.length;d++){for(a=c[d];" "===a.charAt(0);)a=a.substring(1,a.length);var e=a.substring(b,a.indexOf("="));B(e)}},D=function(){return q},E=function(a,b,d,e){e=e||b;var g=u(e);return null===g&&c(d)?g=d:f(g)&&f(d)&&(g=h(g,d)),k(b).assign(a,g),a.$watch(b,function(a){t(e,a)},f(a[b]))},F=function(){for(var a=0,c=b[q],d=0;d<c.length;d++)0===c.key(d).indexOf(n)&&a++;return a};return{isSupported:s,getStorageType:D,set:t,add:t,get:u,keys:w,remove:v,clearAll:x,bind:E,deriveKey:r,length:F,cookie:{isSupported:y,set:z,add:z,get:A,remove:B,clearAll:C}}}]})}(window,window.angular);
-//
+(function (window, angular) {
+var isDefined = angular.isDefined,
+  isUndefined = angular.isUndefined,
+  isNumber = angular.isNumber,
+  isObject = angular.isObject,
+  isArray = angular.isArray,
+  isString = angular.isString,
+  extend = angular.extend,
+  toJson = angular.toJson;
+
+angular
+  .module('LocalStorageModule', [])
+  .provider('localStorageService', function() {
+    // You should set a prefix to avoid overwriting any local storage variables from the rest of your app
+    // e.g. localStorageServiceProvider.setPrefix('yourAppName');
+    // With provider you can use config as this:
+    // myApp.config(function (localStorageServiceProvider) {
+    //    localStorageServiceProvider.prefix = 'yourAppName';
+    // });
+    this.prefix = 'ls';
+
+    // You could change web storage type localstorage or sessionStorage
+    this.storageType = 'localStorage';
+
+    // Cookie options (usually in case of fallback)
+    // expiry = Number of days before cookies expire // 0 = Does not expire
+    // path = The web path the cookie represents
+    // secure = Wether the cookies should be secure (i.e only sent on HTTPS requests)
+    this.cookie = {
+      expiry: 30,
+      path: '/',
+      secure: false
+    };
+
+    // Decides wether we should default to cookies if localstorage is not supported.
+    this.defaultToCookie = true;
+
+    // Send signals for each of the following actions?
+    this.notify = {
+      setItem: true,
+      removeItem: false
+    };
+
+    // Setter for the prefix
+    this.setPrefix = function(prefix) {
+      this.prefix = prefix;
+      return this;
+    };
+
+    // Setter for the storageType
+    this.setStorageType = function(storageType) {
+      this.storageType = storageType;
+      return this;
+    };
+    // Setter for defaultToCookie value, default is true.
+    this.setDefaultToCookie = function (shouldDefault) {
+      this.defaultToCookie = !!shouldDefault; // Double-not to make sure it's a bool value.
+      return this;
+    };
+    // Setter for cookie config
+    this.setStorageCookie = function(exp, path, secure) {
+      this.cookie.expiry = exp;
+      this.cookie.path = path;
+      this.cookie.secure = secure;
+      return this;
+    };
+
+    // Setter for cookie domain
+    this.setStorageCookieDomain = function(domain) {
+      this.cookie.domain = domain;
+      return this;
+    };
+
+    // Setter for notification config
+    // itemSet & itemRemove should be booleans
+    this.setNotify = function(itemSet, itemRemove) {
+      this.notify = {
+        setItem: itemSet,
+        removeItem: itemRemove
+      };
+      return this;
+    };
+
+    this.$get = ['$rootScope', '$window', '$document', '$parse','$timeout', function($rootScope, $window, $document, $parse, $timeout) {
+      var self = this;
+      var prefix = self.prefix;
+      var cookie = self.cookie;
+      var notify = self.notify;
+      var storageType = self.storageType;
+      var webStorage;
+
+      // When Angular's $document is not available
+      if (!$document) {
+        $document = document;
+      } else if ($document[0]) {
+        $document = $document[0];
+      }
+
+      // If there is a prefix set in the config lets use that with an appended period for readability
+      if (prefix.substr(-1) !== '.') {
+        prefix = !!prefix ? prefix + '.' : '';
+      }
+      var deriveQualifiedKey = function(key) {
+        return prefix + key;
+      };
+
+      // Removes prefix from the key.
+      var underiveQualifiedKey = function (key) {
+        return key.replace(new RegExp('^' + prefix, 'g'), '');
+      };
+
+      // Check if the key is within our prefix namespace.
+      var isKeyPrefixOurs = function (key) {
+        return key.indexOf(prefix) === 0;
+      };
+
+      // Checks the browser to see if local storage is supported
+      var checkSupport = function () {
+        try {
+          var supported = (storageType in $window && $window[storageType] !== null);
+
+          // When Safari (OS X or iOS) is in private browsing mode, it appears as though localStorage
+          // is available, but trying to call .setItem throws an exception.
+          //
+          // "QUOTA_EXCEEDED_ERR: DOM Exception 22: An attempt was made to add something to storage
+          // that exceeded the quota."
+          var key = deriveQualifiedKey('__' + Math.round(Math.random() * 1e7));
+          if (supported) {
+            webStorage = $window[storageType];
+            webStorage.setItem(key, '');
+            webStorage.removeItem(key);
+          }
+
+          return supported;
+        } catch (e) {
+          // Only change storageType to cookies if defaulting is enabled.
+          if (self.defaultToCookie)
+            storageType = 'cookie';
+          $rootScope.$broadcast('LocalStorageModule.notification.error', e.message);
+          return false;
+        }
+      };
+      var browserSupportsLocalStorage = checkSupport();
+
+      // Directly adds a value to local storage
+      // If local storage is not available in the browser use cookies
+      // Example use: localStorageService.add('library','angular');
+      var addToLocalStorage = function (key, value, type) {
+        setStorageType(type);
+
+        // Let's convert undefined values to null to get the value consistent
+        if (isUndefined(value)) {
+          value = null;
+        } else {
+          value = toJson(value);
+        }
+
+        // If this browser does not support local storage use cookies
+        if (!browserSupportsLocalStorage && self.defaultToCookie || self.storageType === 'cookie') {
+          if (!browserSupportsLocalStorage) {
+            $rootScope.$broadcast('LocalStorageModule.notification.warning', 'LOCAL_STORAGE_NOT_SUPPORTED');
+          }
+
+          if (notify.setItem) {
+            $rootScope.$broadcast('LocalStorageModule.notification.setitem', {key: key, newvalue: value, storageType: 'cookie'});
+          }
+          return addToCookies(key, value);
+        }
+
+        try {
+          if (webStorage) {
+            webStorage.setItem(deriveQualifiedKey(key), value);
+          }
+          if (notify.setItem) {
+            $rootScope.$broadcast('LocalStorageModule.notification.setitem', {key: key, newvalue: value, storageType: self.storageType});
+          }
+        } catch (e) {
+          $rootScope.$broadcast('LocalStorageModule.notification.error', e.message);
+          return addToCookies(key, value);
+        }
+        return true;
+      };
+
+      // Directly get a value from local storage
+      // Example use: localStorageService.get('library'); // returns 'angular'
+      var getFromLocalStorage = function (key, type) {
+        setStorageType(type);
+
+        if (!browserSupportsLocalStorage && self.defaultToCookie  || self.storageType === 'cookie') {
+          if (!browserSupportsLocalStorage) {
+            $rootScope.$broadcast('LocalStorageModule.notification.warning', 'LOCAL_STORAGE_NOT_SUPPORTED');
+          }
+
+          return getFromCookies(key);
+        }
+
+        var item = webStorage ? webStorage.getItem(deriveQualifiedKey(key)) : null;
+        // angular.toJson will convert null to 'null', so a proper conversion is needed
+        // FIXME not a perfect solution, since a valid 'null' string can't be stored
+        if (!item || item === 'null') {
+          return null;
+        }
+
+        try {
+          return JSON.parse(item);
+        } catch (e) {
+          return item;
+        }
+      };
+
+      // Remove an item from local storage
+      // Example use: localStorageService.remove('library'); // removes the key/value pair of library='angular'
+      //
+      // This is var-arg removal, check the last argument to see if it is a storageType
+      // and set type accordingly before removing.
+      //
+      var removeFromLocalStorage = function () {
+        // can't pop on arguments, so we do this
+        var consumed = 0;
+        if (arguments.length >= 1 &&
+            (arguments[arguments.length - 1] === 'localStorage' ||
+             arguments[arguments.length - 1] === 'sessionStorage')) {
+          consumed = 1;
+          setStorageType(arguments[arguments.length - 1]);
+        }
+
+        var i, key;
+        for (i = 0; i < arguments.length - consumed; i++) {
+          key = arguments[i];
+          if (!browserSupportsLocalStorage && self.defaultToCookie || self.storageType === 'cookie') {
+            if (!browserSupportsLocalStorage) {
+              $rootScope.$broadcast('LocalStorageModule.notification.warning', 'LOCAL_STORAGE_NOT_SUPPORTED');
+            }
+
+            if (notify.removeItem) {
+              $rootScope.$broadcast('LocalStorageModule.notification.removeitem', {key: key, storageType: 'cookie'});
+            }
+            removeFromCookies(key);
+          }
+          else {
+            try {
+              webStorage.removeItem(deriveQualifiedKey(key));
+              if (notify.removeItem) {
+                $rootScope.$broadcast('LocalStorageModule.notification.removeitem', {
+                  key: key,
+                  storageType: self.storageType
+                });
+              }
+            } catch (e) {
+              $rootScope.$broadcast('LocalStorageModule.notification.error', e.message);
+              removeFromCookies(key);
+            }
+          }
+        }
+      };
+
+      // Return array of keys for local storage
+      // Example use: var keys = localStorageService.keys()
+      var getKeysForLocalStorage = function (type) {
+        setStorageType(type);
+
+        if (!browserSupportsLocalStorage) {
+          $rootScope.$broadcast('LocalStorageModule.notification.warning', 'LOCAL_STORAGE_NOT_SUPPORTED');
+          return [];
+        }
+
+        var prefixLength = prefix.length;
+        var keys = [];
+        for (var key in webStorage) {
+          // Only return keys that are for this app
+          if (key.substr(0, prefixLength) === prefix) {
+            try {
+              keys.push(key.substr(prefixLength));
+            } catch (e) {
+              $rootScope.$broadcast('LocalStorageModule.notification.error', e.Description);
+              return [];
+            }
+          }
+        }
+        return keys;
+      };
+
+      // Remove all data for this app from local storage
+      // Also optionally takes a regular expression string and removes the matching key-value pairs
+      // Example use: localStorageService.clearAll();
+      // Should be used mostly for development purposes
+      var clearAllFromLocalStorage = function (regularExpression, type) {
+        setStorageType(type);
+
+        // Setting both regular expressions independently
+        // Empty strings result in catchall RegExp
+        var prefixRegex = !!prefix ? new RegExp('^' + prefix) : new RegExp();
+        var testRegex = !!regularExpression ? new RegExp(regularExpression) : new RegExp();
+
+        if (!browserSupportsLocalStorage && self.defaultToCookie  || self.storageType === 'cookie') {
+          if (!browserSupportsLocalStorage) {
+            $rootScope.$broadcast('LocalStorageModule.notification.warning', 'LOCAL_STORAGE_NOT_SUPPORTED');
+          }
+          return clearAllFromCookies();
+        }
+        if (!browserSupportsLocalStorage && !self.defaultToCookie)
+          return false;
+        var prefixLength = prefix.length;
+
+        for (var key in webStorage) {
+          // Only remove items that are for this app and match the regular expression
+          if (prefixRegex.test(key) && testRegex.test(key.substr(prefixLength))) {
+            try {
+              removeFromLocalStorage(key.substr(prefixLength));
+            } catch (e) {
+              $rootScope.$broadcast('LocalStorageModule.notification.error', e.message);
+              return clearAllFromCookies();
+            }
+          }
+        }
+        return true;
+      };
+
+      // Checks the browser to see if cookies are supported
+      var browserSupportsCookies = (function() {
+        try {
+          return $window.navigator.cookieEnabled ||
+          ("cookie" in $document && ($document.cookie.length > 0 ||
+            ($document.cookie = "test").indexOf.call($document.cookie, "test") > -1));
+          } catch (e) {
+            $rootScope.$broadcast('LocalStorageModule.notification.error', e.message);
+            return false;
+          }
+        }());
+
+        // Directly adds a value to cookies
+        // Typically used as a fallback if local storage is not available in the browser
+        // Example use: localStorageService.cookie.add('library','angular');
+        var addToCookies = function (key, value, daysToExpiry, secure) {
+
+          if (isUndefined(value)) {
+            return false;
+          } else if(isArray(value) || isObject(value)) {
+            value = toJson(value);
+          }
+
+          if (!browserSupportsCookies) {
+            $rootScope.$broadcast('LocalStorageModule.notification.error', 'COOKIES_NOT_SUPPORTED');
+            return false;
+          }
+
+          try {
+            var expiry = '',
+            expiryDate = new Date(),
+            cookieDomain = '';
+
+            if (value === null) {
+              // Mark that the cookie has expired one day ago
+              expiryDate.setTime(expiryDate.getTime() + (-1 * 24 * 60 * 60 * 1000));
+              expiry = "; expires=" + expiryDate.toGMTString();
+              value = '';
+            } else if (isNumber(daysToExpiry) && daysToExpiry !== 0) {
+              expiryDate.setTime(expiryDate.getTime() + (daysToExpiry * 24 * 60 * 60 * 1000));
+              expiry = "; expires=" + expiryDate.toGMTString();
+            } else if (cookie.expiry !== 0) {
+              expiryDate.setTime(expiryDate.getTime() + (cookie.expiry * 24 * 60 * 60 * 1000));
+              expiry = "; expires=" + expiryDate.toGMTString();
+            }
+            if (!!key) {
+              var cookiePath = "; path=" + cookie.path;
+              if (cookie.domain) {
+                cookieDomain = "; domain=" + cookie.domain;
+              }
+              /* Providing the secure parameter always takes precedence over config
+               * (allows developer to mix and match secure + non-secure) */
+              if (typeof secure === 'boolean') {
+                  if (secure === true) {
+                      /* We've explicitly specified secure,
+                       * add the secure attribute to the cookie (after domain) */
+                      cookieDomain += "; secure";
+                  }
+                  // else - secure has been supplied but isn't true - so don't set secure flag, regardless of what config says
+              }
+              else if (cookie.secure === true) {
+                  // secure parameter wasn't specified, get default from config
+                  cookieDomain += "; secure";
+              }
+              $document.cookie = deriveQualifiedKey(key) + "=" + encodeURIComponent(value) + expiry + cookiePath + cookieDomain;
+            }
+          } catch (e) {
+            $rootScope.$broadcast('LocalStorageModule.notification.error', e.message);
+            return false;
+          }
+          return true;
+        };
+
+        // Directly get a value from a cookie
+        // Example use: localStorageService.cookie.get('library'); // returns 'angular'
+        var getFromCookies = function (key) {
+          if (!browserSupportsCookies) {
+            $rootScope.$broadcast('LocalStorageModule.notification.error', 'COOKIES_NOT_SUPPORTED');
+            return false;
+          }
+
+          var cookies = $document.cookie && $document.cookie.split(';') || [];
+          for(var i=0; i < cookies.length; i++) {
+            var thisCookie = cookies[i];
+            while (thisCookie.charAt(0) === ' ') {
+              thisCookie = thisCookie.substring(1,thisCookie.length);
+            }
+            if (thisCookie.indexOf(deriveQualifiedKey(key) + '=') === 0) {
+              var storedValues = decodeURIComponent(thisCookie.substring(prefix.length + key.length + 1, thisCookie.length));
+              try {
+                var parsedValue = JSON.parse(storedValues);
+                return typeof(parsedValue) === 'number' ? storedValues : parsedValue;
+              } catch(e) {
+                return storedValues;
+              }
+            }
+          }
+          return null;
+        };
+
+        var removeFromCookies = function (key) {
+          addToCookies(key,null);
+        };
+
+        var clearAllFromCookies = function () {
+          var thisCookie = null;
+          var prefixLength = prefix.length;
+          var cookies = $document.cookie.split(';');
+          for(var i = 0; i < cookies.length; i++) {
+            thisCookie = cookies[i];
+
+            while (thisCookie.charAt(0) === ' ') {
+              thisCookie = thisCookie.substring(1, thisCookie.length);
+            }
+
+            var key = thisCookie.substring(prefixLength, thisCookie.indexOf('='));
+            removeFromCookies(key);
+          }
+        };
+
+        var getStorageType = function() {
+          return storageType;
+        };
+
+        var setStorageType = function(type) {
+          if (type && storageType !== type) {
+            storageType = type;
+            browserSupportsLocalStorage = checkSupport();
+          }
+          return browserSupportsLocalStorage;
+        };
+
+        // Add a listener on scope variable to save its changes to local storage
+        // Return a function which when called cancels binding
+        var bindToScope = function(scope, key, def, lsKey, type) {
+          lsKey = lsKey || key;
+          var value = getFromLocalStorage(lsKey, type);
+
+          if (value === null && isDefined(def)) {
+            value = def;
+          } else if (isObject(value) && isObject(def)) {
+            value = extend(value, def);
+          }
+
+          $parse(key).assign(scope, value);
+
+          return scope.$watch(key, function(newVal) {
+            addToLocalStorage(lsKey, newVal, type);
+          }, isObject(scope[key]));
+        };
+
+        // Add listener to local storage, for update callbacks.
+        if (browserSupportsLocalStorage) {
+            if ($window.addEventListener) {
+                $window.addEventListener("storage", handleStorageChangeCallback, false);
+                $rootScope.$on('$destroy', function() {
+                    $window.removeEventListener("storage", handleStorageChangeCallback);
+                });
+            } else if($window.attachEvent){
+                // attachEvent and detachEvent are proprietary to IE v6-10
+                $window.attachEvent("onstorage", handleStorageChangeCallback);
+                $rootScope.$on('$destroy', function() {
+                    $window.detachEvent("onstorage", handleStorageChangeCallback);
+                });
+            }
+        }
+
+        // Callback handler for storage changed.
+        function handleStorageChangeCallback(e) {
+            if (!e) { e = $window.event; }
+            if (notify.setItem) {
+                if (isString(e.key) && isKeyPrefixOurs(e.key)) {
+                    var key = underiveQualifiedKey(e.key);
+                    // Use timeout, to avoid using $rootScope.$apply.
+                    $timeout(function () {
+                        $rootScope.$broadcast('LocalStorageModule.notification.changed', { key: key, newvalue: e.newValue, storageType: self.storageType });
+                    });
+                }
+            }
+        }
+
+        // Return localStorageService.length
+        // ignore keys that not owned
+        var lengthOfLocalStorage = function(type) {
+          setStorageType(type);
+
+          var count = 0;
+          var storage = $window[storageType];
+          for(var i = 0; i < storage.length; i++) {
+            if(storage.key(i).indexOf(prefix) === 0 ) {
+              count++;
+            }
+          }
+          return count;
+        };
+
+        return {
+          isSupported: browserSupportsLocalStorage,
+          getStorageType: getStorageType,
+          setStorageType: setStorageType,
+          set: addToLocalStorage,
+          add: addToLocalStorage, //DEPRECATED
+          get: getFromLocalStorage,
+          keys: getKeysForLocalStorage,
+          remove: removeFromLocalStorage,
+          clearAll: clearAllFromLocalStorage,
+          bind: bindToScope,
+          deriveKey: deriveQualifiedKey,
+          underiveKey: underiveQualifiedKey,
+          length: lengthOfLocalStorage,
+          defaultToCookie: this.defaultToCookie,
+          cookie: {
+            isSupported: browserSupportsCookies,
+            set: addToCookies,
+            add: addToCookies, //DEPRECATED
+            get: getFromCookies,
+            remove: removeFromCookies,
+            clearAll: clearAllFromCookies
+          }
+        };
+      }];
+  });
+})(window, window.angular);
 (function (angular) {
     'use strict';
+
+    function ConfigOmnibar(bbOmnibarConfig) {
+        bbOmnibarConfig.serviceName = 'Service Catalog';
+        bbOmnibarConfig.signInRedirectUrl = window.location.href;
+        bbOmnibarConfig.url = 'https://signin.blackbaud.com/omnibar.min.js';
+    }
 
     function ConfigRoutes($stateProvider, $urlRouterProvider) {
         $urlRouterProvider
@@ -5868,10 +6413,11 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             .state('logout', {
                 url: '/logout',
                 template: '',
-                controller: ['$state', '$window', 'AuthService', function ($state, $window, AuthService) {
+                controller: ['$state', 'AuthService', function ($state, AuthService) {
                     AuthService.logout().then(function () {
-                        $state.go('login');
-                        $window.location.reload();
+                        $state.go('login', {}, {
+                            reload: true
+                        });
                     });
                 }]
             })
@@ -5879,6 +6425,11 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                 url: '/register',
                 templateUrl: '../public/app/views/register.html',
                 controller: 'RegisterController as registerCtrl'
+            })
+            .state('reset-password', {
+                url: '/reset-password/:token',
+                templateUrl: '../public/app/views/reset-password.html',
+                controller: 'ResetPasswordController as resetPasswordCtrl'
             })
             .state('profile', {
                 url: '/profile',
@@ -5889,6 +6440,11 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                         role: 'editor'
                     }
                 }
+            })
+            .state('oauth', {
+                url: '/id_token:idToken',
+                template: '',
+                controller: 'TokenController'
             })
             .state('admin', {
                 url: '/admin',
@@ -5901,7 +6457,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                 }
             })
             .state('admin.user-form', {
-                url: '/edit/:id',
+                url: '/user/edit/:id',
                 templateUrl: '../public/app/views/user-form.html',
                 controller: 'UserFormController as userFormCtrl'
             })
@@ -5922,35 +6478,44 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             });
     }
 
-    function Run($rootScope, $state, $window, AuthService, MessageService) {
+    function ConfigSession(localStorageServiceProvider) {
+        localStorageServiceProvider
+            .setPrefix('serviceCatalog')
+            .setStorageType('sessionStorage');
+    }
+
+    function Run($rootScope, $state, $window, AuthService, bbOmnibarConfig, MessageService) {
         var bypass;
+
         bypass = false;
+
         // Restrict routes to roles and permissions.
         $rootScope.$on('$stateChangeStart', function (e, toState, toParams) {
             if (bypass || toState.name === 'login') {
                 bypass = false;
                 return;
             }
+
             e.preventDefault();
+
             AuthService
                 .getUserStatus()
                 .then(function (data) {
                     toState.data = toState.data || {};
+
                     if (toState.data.restrictions) {
                         toState.data.restrictions = toState.data.restrictions || {};
+
                         if (!data.isLoggedIn || AuthService.isAuthorized(toState.data.restrictions.permission) === false || AuthService.isRole(toState.data.restrictions.role) === false) {
                             MessageService.error("You are not authorized to view that page.");
-                            $state.go('login', {}, {
-                                reload: true,
-                                notify: false
-                            });
-                            $window.location.reload();
+                            $state.go('login', {}, { reload: true });
                             return;
                         }
                     }
+
                     bypass = true;
                     $state.go(toState, toParams);
-                });
+                }).catch(MessageService.handleError);
         });
 
         // Store the previous state, for login redirects.
@@ -5961,43 +6526,153 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             };
             $rootScope.$broadcast('ccAuthorizationSuccess');
         });
+
+        bbOmnibarConfig.userLoaded = function (data) {
+            angular.element(document).ready(function () {
+                $rootScope.$broadcast('omnibarUserLoaded', data);
+            });
+        };
     }
 
-    function AppController($scope, AuthService) {
-        var vm;
-        vm = this;
-        vm.isLoggedIn = AuthService.isLoggedIn;
-        vm.isAuthorized = AuthService.isAuthorized;
-        $scope.$on('ccAuthorizationSuccess', function () {
-            vm.isReady = true;
-        });
-    }
+    ConfigOmnibar.$inject = [
+        'bbOmnibarConfig'
+    ];
 
     ConfigRoutes.$inject = [
         '$stateProvider',
         '$urlRouterProvider'
     ];
+
+    ConfigSession.$inject = [
+        'localStorageServiceProvider'
+    ];
+
     Run.$inject = [
         '$rootScope',
         '$state',
         '$window',
         'AuthService',
+        'bbOmnibarConfig',
         'MessageService'
-    ];
-    AppController.$inject = [
-        '$scope',
-        'AuthService'
     ];
 
     angular.module('capabilities-catalog', [
         'sky',
         'ui.router',
         'capabilities-catalog.templates',
+        'LocalStorageModule',
         'ngSanitize'
     ])
+        .config(ConfigOmnibar)
         .config(ConfigRoutes)
-        .run(Run)
+        .run(Run);
+
+        // Disabling this feature until ng-sortable gets their crap together:
+        // https://github.com/RubaXa/Sortable/issues/865
+        // .config(['$compileProvider', function ($compileProvider) {
+        //     $compileProvider.debugInfoEnabled(false);
+        // }]);
+
+}(window.angular));
+
+(function (angular) {
+    'use strict';
+
+    function AppController($scope, $state, $timeout, AuthService) {
+        var vm;
+
+        vm = this;
+        vm.isLoggedIn = AuthService.isLoggedIn;
+        vm.isAuthorized = AuthService.isAuthorized;
+
+        /**
+         * Login Process:
+         * --------------
+         * 1. On page load, wait for the Omnibar to alert Angular app about user status.
+         * 2. If the user is logged out, redirect them to blackbaud.com to login. Upon successful login, save the access token in the Angular app's local storage.
+         * 3. If the user is logged into blackbaud.com, the access token stored in the session is validated.
+         * 4. If the token is valid, the user may automatically login to the catalog using the access token, by clicking on a "Login with Blackbaud.com" button.
+         * 5. If the token is invalid, redirect to blackbaud.com to login.
+         * 6. A user can logout of the catalog with a logout button, but still view the site. If the user is validated by BBAUTH, but logged out of the catalog, they may click the "Login" button to automatically login again.
+         */
+        $scope.$on('omnibarUserLoaded', function (e, user) {
+            if (!user.id) {
+                console.log("Not logged in to blackbaud.com. Redirecting...");
+                AuthService
+                    .logout()
+                    .then(AuthService.redirect)
+                    .catch(AuthService.redirect);
+            } else {
+                console.log("Already logged in to blackbaud.com.");
+                //console.log("Logged in!", user, AuthService.getAccessToken());
+                AuthService
+                    .validateToken()
+                    .then(function () {
+                        console.log("Token validated!");
+                    })
+                    .catch(function () {
+                        console.log("Token invalid.");
+                        // AuthService
+                        //     .logout()
+                        //     .then(AuthService.redirect)
+                        //     .catch(AuthService.redirect);
+                    });
+            }
+        });
+
+        $scope.$on('ccAuthorizationSuccess', function () {
+            vm.isReady = true;
+            $timeout(function () {
+                vm.user = AuthService.getUser();
+            });
+        });
+    }
+
+    AppController.$inject = [
+        '$scope',
+        '$state',
+        '$timeout',
+        'AuthService'
+    ];
+
+    angular.module('capabilities-catalog')
         .controller('AppController', AppController);
+
+}(window.angular));
+
+(function (angular) {
+    'use strict';
+
+    /**
+     * Handles the authentication redirect
+     * and parses token information from the URL hash.
+     */
+    function TokenController($location, $state, SessionService) {
+        var hash,
+            hashArray,
+            hashPairs;
+
+        hash = $location.path().substr(1);
+        hashArray = hash.split('&');
+        hashPairs = {};
+
+        hashArray.forEach(function (hash) {
+            var obj = hash.split('=');
+            hashPairs[obj[0]] = decodeURIComponent(obj[1]);
+        });
+
+        SessionService.set('token', hashPairs);
+        $state.go('home');
+    }
+
+    TokenController.$inject = [
+        '$location',
+        '$state',
+        'SessionService'
+    ];
+
+    angular.module('capabilities-catalog')
+        .controller('TokenController', TokenController);
 
 }(window.angular));
 
@@ -6066,6 +6741,9 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             };
 
             self.getById = function (id) {
+                if (!id) {
+                    return $q.resolve({});
+                }
                 if (AuthService.isAuthorized(settings.authorization.get.permission)) {
                     return $http.get('/api/' + settings.endpointResourceName + '/' + id).then(function (res) {
                         return res.data;
@@ -6105,7 +6783,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 (function (angular) {
     'use strict';
 
-    function AuthService($http, $q) {
+    function AuthService($http, $q, $window, SessionService) {
         var isLoggedIn,
             service,
             user;
@@ -6197,6 +6875,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             var deferred;
 
             deferred = $q.defer();
+            SessionService.clearAll();
 
             $http
                 .get('/api/logout')
@@ -6212,6 +6891,18 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             return deferred.promise;
         };
 
+        service.redirect = function () {
+            var redirect = 'https://signin.blackbaud.com/' +
+                'oauth2/authorize?response_type=id_token' +
+                '&scope=openid profile email' +
+                '&client_id=' + encodeURIComponent('renxt.blackbaud.com') +
+                '&state=' + encodeURIComponent('abc123') +
+                '&nonce=' + encodeURIComponent('abc123') +
+                '&redirect_uri=' + encodeURIComponent('http://localhost:3000/');
+            console.log("REDIRECT", redirect);
+            // $window.location.href = redirect;
+        };
+
         service.register = function (data) {
             return $http
                 .post('/api/register', data)
@@ -6219,11 +6910,18 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                     return res.data;
                 });
         };
+
+        service.validateToken = function () {
+            console.log("Validating access token...");
+            return $http.post('/api/oauth/validate', SessionService.get('token'));
+        };
     }
 
     AuthService.$inject = [
         '$http',
-        '$q'
+        '$q',
+        '$window',
+        'SessionService'
     ];
 
     angular.module('capabilities-catalog')
@@ -6435,8 +7133,40 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 (function (angular) {
     'use strict';
 
-    function UserService(CrudFactory) {
-        return CrudFactory.instantiate({
+    function SessionService(localStorageService) {
+        var service;
+
+        service = this;
+
+        service.get = function (key) {
+            return localStorageService.get(key);
+        };
+
+        service.set = function (key, val) {
+            localStorageService.set(key, val);
+        };
+
+        service.clearAll = function () {
+            localStorageService.clearAll();
+        };
+    }
+
+    SessionService.$inject = [
+        'localStorageService'
+    ];
+
+    angular.module('capabilities-catalog')
+        .service('SessionService', SessionService);
+
+}(window.angular));
+
+(function (angular) {
+    'use strict';
+
+    function UserService($http, CrudFactory) {
+        var service;
+
+        service = CrudFactory.instantiate({
             endpointResourceName: 'users',
             authorization: {
                 delete: {
@@ -6453,9 +7183,18 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                 }
             }
         });
+
+        service.sendResetPasswordRequest = function (id) {
+            return $http.post('/api/users/' + id + '/reset-password').then(function (res) {
+                return res.data;
+            });
+        };
+
+        return service;
     }
 
     UserService.$inject = [
+        '$http',
         'CrudFactory'
     ];
 
@@ -7053,7 +7792,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 (function (angular) {
     'use strict';
 
-    function LoginPageController($state, $window) {
+    function LoginPageController($state) {
         var vm;
         vm = this;
         vm.redirect = function () {
@@ -7067,14 +7806,12 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                 state = 'home';
                 params = {};
             }
-            $state.go(state, params, { reload: true, notify: false });
-            $window.location.reload(true);
+            $state.go(state, params, { reload: true });
         };
     }
 
     LoginPageController.$inject = [
-        '$state',
-        '$window'
+        '$state'
     ];
 
     angular.module('capabilities-catalog')
@@ -7179,6 +7916,39 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 (function (angular) {
     'use strict';
 
+    function ResetPasswordController($state, MessageService, UserService) {
+        var vm;
+
+        vm = this;
+        vm.formData = {};
+
+        if ($state.params.token) {
+            console.log("TOKEN!", $state.params.token);
+        }
+
+        vm.submit = function () {
+            UserService
+                .sendResetPasswordRequest(vm.formData.emailAddress)
+                .then(function () {
+                    MessageService.success('Password reset request successfully sent.');
+                })
+                .catch(MessageService.handleError);
+        };
+    }
+
+    ResetPasswordController.$inject = [
+        'MessageService',
+        'UserService'
+    ];
+
+    angular.module('capabilities-catalog')
+        .controller('ResetPasswordController', ResetPasswordController);
+
+}(window.angular));
+
+(function (angular) {
+    'use strict';
+
     function RolesController(MessageService, PermissionService, RoleService) {
         var vm;
 
@@ -7247,25 +8017,9 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
         vm = this;
         vm.isAuthorized = AuthService.isAuthorized;
+        vm.formData = {};
 
-        function handleResponse(data) {
-            if (vm.formData._id) {
-                MessageService.handleSuccess({
-                    messageText: 'User successfully updated.',
-                    link: 'admin.users',
-                    linkText: 'View all'
-                });
-            } else {
-                MessageService.handleSuccess({
-                    messageText: 'User successfully created.',
-                    link: 'admin.users',
-                    linkText: 'View all'
-                });
-            }
-            vm.formData = data;
-        }
-
-        vm.delete = function () {
+        vm.deleteUser = function () {
             UserService
                 .deleteById($state.params.id)
                 .then(function () {
@@ -7277,16 +8031,17 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                 .catch(MessageService.handleError);
         };
 
-        vm.requestReset = function () {
-            vm.waiting = true;
+        vm.sendResetPasswordRequest = function () {
             UserService
-                .requestReset(vm.formData)
-                .then(handleResponse)
+                .sendResetPasswordRequest(vm.formData.emailAddress)
+                .then(function () {
+                    MessageService.success('Password successfully reset.');
+                })
                 .catch(MessageService.handleError);
         };
 
         vm.isSelected = function (role) {
-            if (!vm.formData || vm.formData._role === role._id) {
+            if (vm.formData._role === role._id) {
                 return true;
             }
             return (role.isDefault === true);
@@ -7296,12 +8051,18 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             if (vm.formData._id) {
                 UserService
                     .updateById($state.params.id, vm.formData)
-                    .then(handleResponse)
+                    .then(function () {
+                        $state.go('admin.users');
+                        MessageService.success('User successfully updated.');
+                    })
                     .catch(MessageService.handleError);
             } else {
                 UserService
                     .create(vm.formData)
-                    .then(handleResponse)
+                    .then(function () {
+                        $state.go('admin.users');
+                        MessageService.success('User successfully created.');
+                    })
                     .catch(MessageService.handleError);
             }
         };
@@ -7314,6 +8075,15 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             })
             .then(function (data) {
                 vm.formData = data;
+
+                // Get the default role
+                if (!vm.formData._id) {
+                    vm.roles.forEach(function (role) {
+                        if (role.isDefault) {
+                            vm.formData._role = role._id;
+                        }
+                    });
+                }
             })
             .catch(MessageService.handleError);
     }
@@ -7391,10 +8161,12 @@ angular.module('capabilities-catalog.templates', []).run(['$templateCache', func
         '<h1>My Profile</h1><table class="table table-striped"><tr><td style=width:25%>Email Address</td><td><i class="fa fa-fw fa-envelope"></i> <span ng-bind=profileCtrl.user.emailAddress></span></td></tr><tr><td>ID</td><td><i class="fa fa-fw fa-user"></i> <span ng-bind=profileCtrl.user._id></span></td></tr><tr><td>Role</td><td><i class="fa fa-fw fa-certificate"></i> <span ng-bind=profileCtrl.user.role></span></td></tr></table>');
     $templateCache.put('../public/app/views/register.html',
         '<h1>Register</h1><form class=form ng-submit=registerCtrl.submit()><div class=form-group><label for=field-email-address>Email address</label><input type=email class=form-control id=field-email-address ng-model=registerCtrl.formData.emailAddress></div><div class=form-group><label for=field-password>Password</label><input type=password class=form-control id=field-password ng-model=registerCtrl.formData.password></div><div class=form-group><button type=submit class="btn btn-primary">Register</button></div></form>');
+    $templateCache.put('../public/app/views/reset-password.html',
+        '<h1>Reset Your Password</h1><form class=form ng-submit=resetPasswordCtrl.submit()><div class=form-group><label for=field-email-address>Email address</label><input type=email class=form-control id=field-email-address ng-model=resetPasswordCtrl.formData.emailAddress></div><div class=form-group><button type=submit class="btn btn-primary">Send</button></div></form>');
     $templateCache.put('../public/app/views/roles.html',
         '<h1>Roles</h1><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=rolesCtrl.createRole()><div class=form-group><input class=form-control id=field-role placeholder="e.g. admin" ng-model=rolesCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td><td></td></tr><tr><th>Name</th><th>Permissions</th><th></th><th></th></tr><tr ng-repeat="role in rolesCtrl.roles"><td><form ng-if=role.showEditor ng-submit=rolesCtrl.updateRole(role)><div class=form-group><input ng-model=role.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="role.showEditor=false">Cancel</button></form><span ng-if=!role.showEditor ng-click="role.showEditor=true"><i class="fa fa-fw fa-pencil"></i> <span ng-bind=role.name></span></span></td><td><form ng-submit=rolesCtrl.updateRole(role)><div class=checkbox ng-repeat="permission in rolesCtrl.permissions"><label><input type=checkbox ng-checked="role._permissions.indexOf(permission._id) > -1" ng-click="rolesCtrl.toggleSelection(role, permission._id)"><span ng-bind=permission.name></span></label></div><div class=form-group><button type=submit class="btn btn-xs btn-primary">Update Permissions</button></div></form></td><td><label><input ng-disabled="role.name === \'admin\'" type=checkbox ng-checked=role.isDefault ng-click=rolesCtrl.updateDefaultRole($index)> Default</label></td><td><button class="btn btn-xs btn-default" ng-click=rolesCtrl.delete($index)><i class="fa fa-trash"></i>Delete</button></td></tr></table>');
     $templateCache.put('../public/app/views/user-form.html',
-        '<div class=page-header><h1 ng-if=userFormCtrl.formData._id>Edit User</h1><h1 ng-if=!userFormCtrl.formData._id>New User Registration</h1></div><form name=register-form id=form-login class=form-horizontal ng-submit=userFormCtrl.submit() method=post validate><div class="col-md-9 col-sm-10 form-group tab-pane"><div class=form-group ng-class="{\'has-error\': register-form.emailAddress.$touched && register-form.emailAddress.$invalid}"><label class="col-md-3 col-sm-2 control-label">Email Address:</label><div class="col-md-9 col-sm-10"><input class=form-control autocomplete=off type=email name=registerEmailAddress ng-model=userFormCtrl.formData.emailAddress placeholder=(required) required><div ng-show=register-form.$error.email class=help-block>Valid email address is required.</div></div></div><div class=form-group><label class="col-md-3 col-sm-2 control-label">Role:</label><div class="col-md-9 col-sm-10"><select class=form-control name=roleModel ng-model=userFormCtrl.formData._role required><option value="">--- Select ---</option><option ng-repeat="role in userFormCtrl.roles track by $index" value="{{ role._id }}" ng-selected=::userFormCtrl.isSelected(role)>{{ role.name }}</option></select><div ng-show=register-form.roleModel.$error.required class=help-block>Valid user role selection required.</div></div></div></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-primary btn-block" type=submit ng-disabled="register-form.$invalid || userFormCtrl.waiting"><i class="fa fa-save"></i>Save</button> <button ng-if=!userFormCtrl.formData._id class="btn btn-primary btn-block" type=submit ng-disabled="register-form.$invalid || userFormCtrl.waiting"><i class="fa fa-plus"></i>Create</button> <button ng-if="::userFormCtrl.formData._id && appCtrl.isAuthorized(\'DELETE_ADOPTION_STATUS\')" class="btn btn-danger btn-block" type=button cc-confirm-click="Are you sure you want to DELETE {{userFormCtrl.formData.emailAddress}}" data-confirmed-click=userFormCtrl.delete()><i class="fa fa-trash"></i>Delete</button></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-default btn-block" type=button ng-click=userFormCtrl.requestReset() ng-disabled=userFormCtrl.waiting cc-confirm-click="Are you sure you want to request a passphrase reset for {{userFormCtrl.formData.emailAddress}}?"><i class="fa fa-refresh" aria-hidden=true></i>Reset Passphrase</button></div></form>');
+        '<div class=page-header><h1 ng-if=userFormCtrl.formData._id>Edit User</h1><h1 ng-if=!userFormCtrl.formData._id>New User Registration</h1></div><form name=register-form id=form-login class=form-horizontal ng-submit=userFormCtrl.submit() method=post validate><div class="col-md-9 col-sm-10 form-group tab-pane"><div class=form-group ng-class="{\'has-error\': register-form.emailAddress.$touched && register-form.emailAddress.$invalid}"><label class="col-md-3 col-sm-2 control-label">Email Address:</label><div class="col-md-9 col-sm-10"><input class=form-control autocomplete=off type=email name=registerEmailAddress ng-model=userFormCtrl.formData.emailAddress placeholder=(required) required><div ng-show=register-form.$error.email class=help-block>Valid email address is required.</div></div></div><div class=form-group><label class="col-md-3 col-sm-2 control-label">Role:</label><div class="col-md-9 col-sm-10"><select class=form-control name=roleModel ng-model=userFormCtrl.formData._role required><option value="">--- Select ---</option><option ng-repeat="role in userFormCtrl.roles track by $index" value="{{ role._id }}" ng-selected=::userFormCtrl.isSelected(role)>{{ role.name }}</option></select><div ng-show=register-form.roleModel.$error.required class=help-block>Valid user role selection required.</div></div></div></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-primary btn-block" type=button ng-disabled=register-form.$invalid cc-confirm-click="Are you sure you want to edit {{userFormCtrl.formData.emailAddress}}? This user\'s session will be deleted and they will be asked to login again." data-confirmed-click=userFormCtrl.submit()><i class="fa fa-save"></i>Save</button> <button ng-if=!userFormCtrl.formData._id class="btn btn-primary btn-block" type=submit ng-disabled=register-form.$invalid><i class="fa fa-plus"></i>Create</button> <button ng-if="::userFormCtrl.formData._id && appCtrl.isAuthorized(\'DELETE_USER\')" class="btn btn-danger btn-block" type=button cc-confirm-click="Are you sure you want to DELETE {{userFormCtrl.formData.emailAddress}}?" data-confirmed-click=userFormCtrl.deleteUser()><i class="fa fa-trash"></i>Delete</button></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-default btn-block" type=button cc-confirm-click="Are you sure you want to request a password reset for {{userFormCtrl.formData.emailAddress}}?" data-confirmed-click=userFormCtrl.sendResetPasswordRequest()><i class="fa fa-refresh" aria-hidden=true></i>Reset Password</button></div></form>');
     $templateCache.put('../public/app/views/users.html',
         '<div class=page-header><div class=controls><a class="btn btn-default" ng-if="appCtrl.isAuthorized(\'CREATE_USER\')" ui-sref="admin.user-form({ id: null })" href><i class="fa fa-plus"></i>Add new user</a></div><h1 class=bb-page-heading>Users</h1></div><cc-sortable-table model=usersCtrl.users columns=usersCtrl.sortableTable.columns></cc-sortable-table>');
     $templateCache.put('../public/app/components/back-to-top/back-to-top.html',
@@ -7408,7 +8180,7 @@ angular.module('capabilities-catalog.templates', []).run(['$templateCache', func
     $templateCache.put('../public/app/components/chart/chart.html',
         '<div class=chart ng-if=::chartCtrl.model.length ng-click=chartCtrl.openModal()><div class=meter style="width:{{:: chartCtrl.model.length * 30 }}px"><div ng-repeat="total in ::chartCtrl.totals track by $index" class="bar {{:: total.class }}" style="width:{{:: total.percentage }}%" tooltip-placement=top tooltip-popup-delay=200 uib-tooltip="{{:: total.model.adoptionStatus.name }} · {{::total.count}} adopting"></div></div></div>');
     $templateCache.put('../public/app/components/forms/login/login-form.html',
-        '<div bb-scroll-into-view=formCtrl.scrollToTop><div ng-if=formCtrl.success class="alert alert-success" ng-bind-html=formCtrl.trustHtml(formCtrl.success)></div><div ng-if=formCtrl.error class="alert alert-danger" ng-bind-html=formCtrl.trustHtml(formCtrl.error)></div><div ng-if=formCtrl.isBlackbaudAuthenticated><button class="btn btn-primary">Login using Blackbaud.com</button></div><form name=loginForm id=form-login class=form-horizontal ng-submit=formCtrl.submit() method=post novalidate><div class=form-group ng-class="{\'has-error\': loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid}"><label class="col-sm-2 control-label">Email Address:</label><div class=col-sm-10><input class=form-control id=email-address name=emailAddress ng-model=formCtrl.formData.emailAddress placeholder=(required) required><div ng-show="loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid" class=help-block>Email Address is required.</div></div></div><div class=form-group ng-class="{\'has-error\': loginForm.password.$touched && loginForm.password.$invalid}"><label class="col-sm-2 control-label">Password:</label><div class=col-sm-10><input class=form-control type=password name=password ng-model=formCtrl.formData.password placeholder=(required) required><div ng-show="loginForm.password.$touched && loginForm.password.$invalid" class=help-block>Password is required.</div></div></div><div class="form-group form-buttons"><div class="col-sm-offset-2 col-sm-10"><button class="btn btn-primary btn-lg" id=login-form-button type=submit ng-disabled=loginForm.$invalid><i class="fa fa-login"></i>Log In</button></div></div><div class="pull-right reset-request-text"><span>Forgot password?</span> <a ui-sref="reset-password({token: null})">Request reset</a></div></form></div>');
+        '<div bb-scroll-into-view=formCtrl.scrollToTop><div ng-if=formCtrl.success class="alert alert-success" ng-bind-html=formCtrl.trustHtml(formCtrl.success)></div><div ng-if=formCtrl.error class="alert alert-danger" ng-bind-html=formCtrl.trustHtml(formCtrl.error)></div><div ng-if=formCtrl.isBlackbaudAuthenticated><button class="btn btn-primary">Login using Blackbaud.com</button></div><form name=loginForm id=form-login class=form-horizontal ng-submit=formCtrl.submit() method=post novalidate><div class=form-group ng-class="{\'has-error\': loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid}"><label class="col-sm-2 control-label">Email Address:</label><div class=col-sm-10><input class=form-control id=email-address name=emailAddress ng-model=formCtrl.formData.emailAddress placeholder=(required) required><div ng-show="loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid" class=help-block>Email Address is required.</div></div></div><div class=form-group ng-class="{\'has-error\': loginForm.password.$touched && loginForm.password.$invalid}"><label class="col-sm-2 control-label">Password:</label><div class=col-sm-10><input class=form-control type=password name=password ng-model=formCtrl.formData.password placeholder=(required) required><div ng-show="loginForm.password.$touched && loginForm.password.$invalid" class=help-block>Password is required.</div></div></div><div class=form-group><label class="col-sm-2 control-label"></label><div class=col-sm-10><a href ui-sref=reset-password>Forgot your password?</a></div></div><div class="form-group form-buttons"><div class="col-sm-offset-2 col-sm-10"><button class="btn btn-primary btn-lg" id=login-form-button type=submit ng-disabled=loginForm.$invalid><i class="fa fa-login"></i>Log In</button></div></div></form></div>');
     $templateCache.put('../public/app/components/modals/chart-modal.html',
         '<bb-modal><div class=modal-wrapper><bb-modal-header>{{:: modalCtrl.title }}</bb-modal-header><div class="modal-body modal-table"><div class=table-responsive><table class="table table-striped"><tr ng-repeat="item in ::modalCtrl.model track by $index"><td><h4 ng-bind=::item.name></h4><div><span ng-bind-html=::item.defaultComment></span>&nbsp; <span ng-bind-html=::item.comment></span></div></td><td style="white-space: nowrap"><span class="bullet {{:: item.class }}"></span><span ng-bind=::item.adoptionStatus.name></span></td></tr></table></div></div><bb-modal-footer><button ng-click=$close() class="btn btn-default">Close</button></bb-modal-footer></div></bb-modal>');
     $templateCache.put('../public/app/components/modals/login-modal.html',

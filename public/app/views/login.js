@@ -1,7 +1,7 @@
 (function (angular) {
     'use strict';
 
-    function LoginPageController($state, $window) {
+    function LoginPageController($state) {
         var vm;
         vm = this;
         vm.redirect = function () {
@@ -15,14 +15,12 @@
                 state = 'home';
                 params = {};
             }
-            $state.go(state, params, { reload: true, notify: false });
-            $window.location.reload(true);
+            $state.go(state, params, { reload: true });
         };
     }
 
     LoginPageController.$inject = [
-        '$state',
-        '$window'
+        '$state'
     ];
 
     angular.module('capabilities-catalog')

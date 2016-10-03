@@ -49,6 +49,116 @@ module.exports = function (router) {
         next();
     });
 
+    // Validate the token response.
+    router.post('/api/oauth/validate', function (req, res, next) {
+        var clientId,
+            http,
+            JWS,
+            nonce,
+            rsa,
+            state,
+            token;
+
+        clientId = 'renxt.blackbaud.com';
+        nonce = 'abc123';
+        state = 'abc123';
+        token = req.body.id_token;
+        http = require('request-promise');
+        rsa = require('jsrsasign');
+        JWS = rsa.jws.JWS;
+
+        if (!token) {
+            return next(new Error("You are not logged in to Blackbaud.com!"));
+        }
+
+        // Validate our token against the requestor.
+        http('https://signin.blackbaud.com/oauth2/certs').then(function (response) {
+            var found,
+                header,
+                isValid,
+                keys,
+                payload,
+                successRedirect;
+
+            response = JSON.parse(response);
+
+            keys = response.keys;
+            header = JWS.readSafeJSONString(rsa.b64utoutf8(token.split('.')[0]));
+            payload = JWS.readSafeJSONString(rsa.b64utoutf8(token.split('.')[1]));
+            successRedirect = 'http://localhost:3000/';
+
+            console.log("KEYS:", keys);
+            console.log("PAYLOAD:", payload);
+
+            // Find the published key that was used to sign the JWT.
+            keys.forEach(function (key) {
+                var publicKey;
+
+                if (found) {
+                    return;
+                }
+
+                if (key.x5t === header.x5t || key.kid === header.kid) {
+
+                    found = true;
+                    publicKey = rsa.KEYUTIL.getKey(key);
+                    isValid = JWS.verifyJWT(token, publicKey, {
+                        alg: [key.alg],
+                        iss: ['https://signin.blackbaud.com/']
+                    });
+
+                    if (!isValid) {
+                        console.log("JWT validation failed!");
+                    }
+
+                    // Confirm nonce.
+                    isValid = isValid && (nonce !== null) && (payload.nonce === nonce);
+
+                    if (!isValid) {
+                        console.log("Nonce validation failed!");
+                    }
+
+                    // Confirm state
+                    isValid = isValid && (state !== null) && (req.body.state === state);
+
+                    if (!isValid) {
+                        console.log("State validation failed!");
+                    }
+
+                    // Confirm aud
+                    isValid = isValid && (payload.aud === clientId);
+                    if (!isValid) {
+                        console.log("Client ID validation failed!");
+                    }
+                }
+            });
+
+            if (found && isValid) {
+
+                console.log("Email", payload.email);
+                console.log("Success redirect", successRedirect);
+
+                UserService.getByEmailAddress(payload.email).then(function (data) {
+                    console.log("USER:", data);
+                    res.status(200).json({
+                        "status": true
+                    });
+                }).catch(function () {
+                    console.log("User not found.");
+                    res.status(200).json({
+                        "status": false
+                    });
+                });
+
+            } else {
+                console.log("Invalid!");
+                res.status(401).json({
+                    "status": false
+                });
+            }
+        }).catch(next);
+    });
+
     router.post('/api/register', function (req, res, next) {
         UserService
             .register(req.body.emailAddress, req.body.password, req.body.roleId)
@@ -90,6 +200,18 @@ module.exports = function (router) {
     });
 
     router.get('/api/user-status', function (req, res) {
+        // var err = new Error("Please login to Blackbaud.com.");
+        // err.status = 401;
+        //
+        // var http = require('request-promise');
+        // http(url).then(function (res) {
+        //             console.log("SUCCES", res);
+        //         }).catch(function (res) {
+        //             console.log("ERROR", res);
+        //         });
+        //
+        // return next(err);
+
         if (!req.isAuthenticated()) {
             return res.status(200).json({
                 status: false,

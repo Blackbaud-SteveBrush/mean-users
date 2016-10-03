@@ -63,6 +63,9 @@
             };
 
             self.getById = function (id) {
+                if (!id) {
+                    return $q.resolve({});
+                }
                 if (AuthService.isAuthorized(settings.authorization.get.permission)) {
                     return $http.get('/api/' + settings.endpointResourceName + '/' + id).then(function (res) {
                         return res.data;

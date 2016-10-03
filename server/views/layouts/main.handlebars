@@ -10,23 +10,22 @@
   </head>
   <body ng-app="capabilities-catalog" ng-cloak>
     <div class="page" ng-controller="AppController as appCtrl">
+      <bb-omnibar></bb-omnibar>
       <div ng-if="appCtrl.isReady">
-        <bb-omnibar></bb-omnibar>
         <header id="header">
           <bb-navbar class="navbar navbar-inverse bb-navbar">
             <div class="container">
-              <ul class="nav navbar-nav navbar-right">
-                {{#unless user}}
+              <ul ng-if="!appCtrl.isLoggedIn()" class="nav navbar-nav navbar-right">
                 <li ui-sref-active="bb-navbar-active">
                   <a href ui-sref="login">Log in</a>
                 </li>
                 <li ui-sref-active="bb-navbar-active">
                   <a href ui-sref="register">Register</a>
                 </li>
-                {{/unless}}
-                {{#if user}}
+              </ul>
+              <ul ng-if="appCtrl.isLoggedIn()" class="nav navbar-nav navbar-right">
                 <li ui-sref-active="bb-navbar-active">
-                  <a href ui-sref="profile">{{ user.emailAddress }}</a>
+                  <a href ui-sref="profile" ng-bind="appCtrl.user.emailAddress"></a>
                 </li>
                 <li ui-sref-active="bb-navbar-active">
                   <a href ui-sref="admin.users">Users</a>
@@ -40,7 +39,6 @@
                 <li ui-sref-active="bb-navbar-active">
                   <a href ui-sref="logout">Log out</a>
                 </li>
-                {{/if}}
               </ul>
               <ul class="nav navbar-nav navbar-left">
                 <li ui-sref-active="bb-navbar-active">

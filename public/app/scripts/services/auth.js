@@ -1,7 +1,7 @@
 (function (angular) {
     'use strict';
 
-    function AuthService($http, $q) {
+    function AuthService($http, $q, $window, SessionService) {
         var isLoggedIn,
             service,
             user;
@@ -93,6 +93,7 @@
             var deferred;
 
             deferred = $q.defer();
+            SessionService.clearAll();
 
             $http
                 .get('/api/logout')
@@ -108,6 +109,18 @@
             return deferred.promise;
         };
 
+        service.redirect = function () {
+            var redirect = 'https://signin.blackbaud.com/' +
+                'oauth2/authorize?response_type=id_token' +
+                '&scope=openid profile email' +
+                '&client_id=' + encodeURIComponent('renxt.blackbaud.com') +
+                '&state=' + encodeURIComponent('abc123') +
+                '&nonce=' + encodeURIComponent('abc123') +
+                '&redirect_uri=' + encodeURIComponent('http://localhost:3000/');
+            console.log("REDIRECT", redirect);
+            // $window.location.href = redirect;
+        };
+
         service.register = function (data) {
             return $http
                 .post('/api/register', data)
@@ -115,11 +128,18 @@
                     return res.data;
                 });
         };
+
+        service.validateToken = function () {
+            console.log("Validating access token...");
+            return $http.post('/api/oauth/validate', SessionService.get('token'));
+        };
     }
 
     AuthService.$inject = [
         '$http',
-        '$q'
+        '$q',
+        '$window',
+        'SessionService'
     ];
 
     angular.module('capabilities-catalog')

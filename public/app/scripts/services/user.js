@@ -1,8 +1,10 @@
 (function (angular) {
     'use strict';
 
-    function UserService(CrudFactory) {
-        return CrudFactory.instantiate({
+    function UserService($http, CrudFactory) {
+        var service;
+
+        service = CrudFactory.instantiate({
             endpointResourceName: 'users',
             authorization: {
                 delete: {
@@ -19,9 +21,18 @@
                 }
             }
         });
+
+        service.sendResetPasswordRequest = function (id) {
+            return $http.post('/api/users/' + id + '/reset-password').then(function (res) {
+                return res.data;
+            });
+        };
+
+        return service;
     }
 
     UserService.$inject = [
+        '$http',
         'CrudFactory'
     ];
 

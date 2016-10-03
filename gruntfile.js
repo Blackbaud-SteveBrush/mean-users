@@ -26,7 +26,7 @@ module.exports = function (grunt) {
                         'bower_components/to-markdown/dist/to-markdown.js',
                         'bower_components/bootstrap-markdown/js/bootstrap-markdown.js',
                         'bower_components/angular-sanitize/angular-sanitize.js',
-                        'bower_components/angular-local-storage/dist/angular-local-storage.min.js',
+                        'bower_components/angular-local-storage/dist/angular-local-storage.js',
                         'public/app/app.js',
                         'public/app/scripts/**/*.js',
                         'public/app/components/**/*.js',
@@ -147,7 +147,7 @@ module.exports = function (grunt) {
                 tasks: ['concat_sourcemap:app', 'uglify:scripts']
             },
             templates: {
-                files: ['public/app/components/**/*.html'],
+                files: ['public/app/components/**/*.html', 'public/app/views/**/*.html'],
                 tasks: ['html2js', 'concat_sourcemap:app', 'uglify:scripts']
             },
             views: {

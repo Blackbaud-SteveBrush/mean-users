@@ -102,8 +102,17 @@ router.route('/api/users')
         }).catch(next);
     });
 
+router.post('/api/users/:id/reset-password', function (req, res, next) {
+    UserService.sendResetPasswordRequest(req.params.id).then(function (data) {
+        utils.parseSuccess(res, data);
+    }).catch(next);
+});
+
 router.route('/api/users/:id')
     .delete(function (req, res, next) {
+        if (req.user._id.equals(req.params.id)) {
+            throw new Error("You cannot delete yourself.");
+        }
         UserService.deleteById(req.params.id).then(function (data) {
             utils.parseSuccess(res, data);
         }).catch(next);
