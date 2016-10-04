@@ -39,7 +39,7 @@ function resetUsersFromEnv(callback) {
 
     permissionIds = {
         'editor': [],
-        'admin': []
+        'administrator': []
     };
 
     if (doResetUsers === false) {
@@ -84,7 +84,7 @@ function resetUsersFromEnv(callback) {
                             if (editorPermissions.indexOf(data.name) > -1) {
                                 permissionIds.editor.push(data._id);
                             }
-                            permissionIds.admin.push(data._id);
+                            permissionIds.administrator.push(data._id);
                             console.log("Permission created: " + data.name);
                             next();
                         }).catch(next);
@@ -104,8 +104,8 @@ function resetUsersFromEnv(callback) {
         .then(function () {
             console.log("Creating admin role...");
             return RoleService.create({
-                name: 'admin',
-                _permissions: permissionIds.admin
+                name: 'administrator',
+                _permissions: permissionIds.administrator
             });
         })
 

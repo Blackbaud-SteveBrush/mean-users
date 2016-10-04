@@ -43,46 +43,67 @@ function CrudRouter(options) {
 
     self.routes = {
         delete: [function (req, res, next) {
-            self.settings.service.deleteById(req.params.id).then(function (data) {
+            return self.settings.service.deleteById(req.params.id).then(function (data) {
                 utils.parseSuccess(res, data);
             }).catch(next);
         }],
         get: [function (req, res, next) {
-            self.settings.service.getById(req.params.id).then(function (data) {
+            return self.settings.service.getById(req.params.id).then(function (data) {
                 utils.parseSuccess(res, data);
             }).catch(next);
         }],
         getAll: [function (req, res, next) {
-            self.settings.service.getAll().then(function (data) {
+            return self.settings.service.getAll().then(function (data) {
                 utils.parseSuccess(res, data);
             }).catch(next);
         }],
         post: [function (req, res, next) {
-            self.settings.service.create(req.body).then(function (data) {
+            return self.settings.service.create(req.body).then(function (data) {
                 utils.parseSuccess(res, data);
             }).catch(next);
         }],
         put: [function (req, res, next) {
-            self.settings.service.updateById(req.params.id, req.body).then(function (data) {
+            return self.settings.service.updateById(req.params.id, req.body).then(function (data) {
                 utils.parseSuccess(res, data);
             }).catch(next);
         }]
     };
 
-    // Add permission checks to the middleware arrays.
-    checkPermissionMiddleware = function (req, res, next) {
-        next(req.isAuthorized(self.settings.authorization[k].permission));
+    self.delete = function (callbacks) {
+        self.routes.delete = callbacks;
     };
-    for (k in self.routes) {
-        if (self.routes.hasOwnProperty(k)) {
-            if (self.settings.authorization[k].permission) {
-                console.log("+ Requiring permission `" + self.settings.authorization[k].permission + "` for route " + k + ".");
-                self.routes[k].unshift(checkPermissionMiddleware);
-            }
-        }
-    }
+
+    self.get = function (callbacks) {
+        self.routes.get = callbacks;
+    };
+
+    self.getAll = function (callbacks) {
+        self.routes.getAll = callbacks;
+    };
+
+    self.post = function (callbacks) {
+        self.routes.post = callbacks;
+    };
+
+    self.put = function (callbacks) {
+        self.routes.put = callbacks;
+    };
 
     self.attach = function (router) {
+
+        // Add permission checks to the middleware arrays, if applicable.
+        checkPermissionMiddleware = function (req, res, next) {
+            next(req.isAuthorized(self.settings.authorization[k].permission));
+        };
+        for (k in self.routes) {
+            if (self.routes.hasOwnProperty(k)) {
+                if (self.settings.authorization[k].permission) {
+                    console.log("+ Requiring permission `" + self.settings.authorization[k].permission + "` for route " + k + ".");
+                    self.routes[k].unshift(checkPermissionMiddleware);
+                }
+            }
+        }
+
         router.route('/api/' + self.settings.resourceName)
             .get(self.routes.getAll)
             .post(self.routes.post);

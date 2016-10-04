@@ -12,7 +12,7 @@
                     permission: 'CREATE_ROLE'
                 },
                 put: {
-                    permission: 'UPDATE_ROLE'
+                    permission: 'EDIT_ROLE'
                 }
             }
         });

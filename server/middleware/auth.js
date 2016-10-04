@@ -1,12 +1,16 @@
-var PermissionService,
+var mailer,
+    PermissionService,
     passport,
     RoleService,
-    UserService;
+    UserService,
+    utils;
 
 PermissionService = require('../database/services/permission');
 RoleService = require('../database/services/role');
 UserService = require('../database/services/user');
 passport = require('passport');
+utils = require('../libs/utils');
+mailer = require('../libs/mailer');
 
 module.exports = function (router) {
 
@@ -137,7 +141,6 @@ module.exports = function (router) {
         next();
     });
 
-    // Validate the token response.
     router.post('/api/oauth/validate', function (req, res, next) {
         validateToken(req).then(function () {
             res.status(200).json({
@@ -158,6 +161,37 @@ module.exports = function (router) {
                 });
             })
             .catch(next);
+    });
+
+    router.post('/api/registration-request', function (req, res, next) {
+        if (!req.body.emailAddress || req.body.emailAddress.indexOf('blackbaud.com') === -1) {
+            next(new Error("Please provide a Blackbaud.com email address."));
+            return;
+        }
+        UserService.getAllByRole('administrator').then(function (users) {
+            var adminEmails;
+
+            adminEmails = [];
+
+            users.forEach(function (user) {
+                adminEmails.push(user.emailAddress);
+            });
+
+            mailer
+                .sendEmail({
+                    inject: {
+                        emailAddress: req.body.emailAddress,
+                        url: req.headers.referrer
+                    },
+                    to: adminEmails,
+                    subject: 'Service Catalog > Registration Request',
+                    body: '<p>Please create an editor account for this email address: {{emailAddress}}. Thank you!<p><p><a href="{{host}}">Go to the Service Catalog&nbsp;&rarr;</a></p>'
+                })
+                .then(function () {
+                    utils.parseSuccess(res, {});
+                })
+                .catch(next);
+        }).catch(next);
     });
 
     router.post('/api/login', function (req, res, next) {

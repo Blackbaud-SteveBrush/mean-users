@@ -36,8 +36,8 @@ environment = process.env.NODE_ENV || 'development';
 app = express();
 
 app.engine('handlebars', Handlebars({
-  defaultLayout: 'main',
-  layoutsDir: './server/views/layouts'
+    defaultLayout: 'main',
+    layoutsDir: './server/views/layouts'
 }));
 
 app.set('views', './server/views');
@@ -50,9 +50,9 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(favicon('./build/images/favicon.ico'));
 app.use(express.static('./build'));
 app.use(session({
-  secret: 'holdontoyourbutts',
-  resave: false,
-  saveUninitialized: false
+    secret: 'holdontoyourbutts',
+    resave: false,
+    saveUninitialized: false
 }));
 app.use(passport.initialize());
 app.use(passport.session());
@@ -69,7 +69,8 @@ database.connect(function (uri) {
 
 // Catch 404 and forward to error handler
 app.use(function (req, res, next) {
-    var err = new Error('Not Found');
+    var err;
+    err = new Error('Not Found');
     err.status = 404;
     next(err);
 });

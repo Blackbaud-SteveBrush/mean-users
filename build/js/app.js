@@ -6391,7 +6391,7 @@ angular
 
     function ConfigOmnibar(bbOmnibarConfig) {
         bbOmnibarConfig.serviceName = 'Service Catalog';
-        bbOmnibarConfig.signInRedirectUrl = window.location.href;
+        bbOmnibarConfig.signInRedirectUrl = location.href;
         bbOmnibarConfig.url = 'https://signin.blackbaud.com/omnibar.min.js';
     }
 
@@ -6420,6 +6420,11 @@ angular
                 templateUrl: '../public/app/views/home.html',
                 controller: 'HomeController as homeCtrl'
             })
+            .state('help', {
+                url: 'help',
+                parent: 'oauth',
+                templateUrl: '../public/app/views/help.html'
+            })
             .state('login', {
                 url: 'login',
                 parent: 'oauth',
@@ -6431,11 +6436,11 @@ angular
                 parent: 'oauth',
                 controller: 'LogoutController'
             })
-            .state('register', {
-                url: 'register',
+            .state('registration-request', {
+                url: 'registration-request',
                 parent: 'oauth',
-                templateUrl: '../public/app/views/register.html',
-                controller: 'RegisterController as registerCtrl'
+                templateUrl: '../public/app/views/register-request.html',
+                controller: 'RegisterRequestController as registerRequestCtrl'
             })
             .state('reset-password', {
                 url: 'reset-password/:token',
@@ -6461,7 +6466,7 @@ angular
                 template: '<ui-view/>',
                 data: {
                     restrictions: {
-                        role: 'admin'
+                        role: 'administrator'
                     }
                 }
             })
@@ -6671,7 +6676,6 @@ angular
             hashPairs;
 
         hash = $window.location.href.split('?')[1];
-        console.log($window.location.href, $window.location.href.split('?'));
         hashArray = hash.split('&');
         hashPairs = {};
 
@@ -6849,7 +6853,7 @@ angular
             if (user === null) {
                 return false;
             }
-            if (user.role === 'admin') {
+            if (user.role === 'administrator') {
                 return true;
             }
             return (user.permissions.indexOf(permission) > -1);
@@ -6862,7 +6866,7 @@ angular
             if (user === null) {
                 return false;
             }
-            if (user.role === 'admin') {
+            if (user.role === 'administrator') {
                 return true;
             }
             return (user.role === role);
@@ -6931,6 +6935,16 @@ angular
         service.register = function (data) {
             return $http
                 .post('/api/register', data)
+                .then(function (res) {
+                    return res.data;
+                });
+        };
+
+        service.createRegistrationRequest = function (emailAddress) {
+            return $http
+                .post('/api/registration-request/', {
+                    emailAddress: emailAddress
+                })
                 .then(function (res) {
                     return res.data;
                 });
@@ -7103,8 +7117,7 @@ angular
     'use strict';
 
     function PermissionService(CrudFactory) {
-        var service;
-        service = CrudFactory.instantiate({
+        return CrudFactory.instantiate({
             endpointResourceName: 'permissions',
             authorization: {
                 delete: {
@@ -7114,14 +7127,10 @@ angular
                     permission: 'CREATE_PERMISSION'
                 },
                 put: {
-                    permission: 'UPDATE_PERMISSION'
+                    permission: 'EDIT_PERMISSION'
                 }
             }
         });
-        service.getAll().then(function (data) {
-            console.log("PERMISSIONS:", data.value);
-        });
-        return service;
     }
 
     PermissionService.$inject = [
@@ -7147,7 +7156,7 @@ angular
                     permission: 'CREATE_ROLE'
                 },
                 put: {
-                    permission: 'UPDATE_ROLE'
+                    permission: 'EDIT_ROLE'
                 }
             }
         });
@@ -7195,7 +7204,7 @@ angular
 (function (angular) {
     'use strict';
 
-    function UserService($http, CrudFactory) {
+    function UserService($http, $q, CrudFactory) {
         var service;
 
         service = CrudFactory.instantiate({
@@ -7211,13 +7220,32 @@ angular
                     permission: 'CREATE_USER'
                 },
                 put: {
-                    permission: 'UPDATE_USER'
+                    permission: 'EDIT_USER'
                 }
             }
         });
 
-        service.sendResetPasswordRequest = function (id) {
-            return $http.post('/api/users/' + id + '/reset-password').then(function (res) {
+        service.sendResetPasswordRequest = function (emailAddress) {
+            return $http.post('/api/users/reset-password-request', {
+                emailAddress: emailAddress
+            }).then(function (res) {
+                return res.data;
+            });
+        };
+
+        service.resetPassword = function (token, password, retypePassword) {
+            if (password !== retypePassword) {
+                return $q.reject("The passwords you entered do not match!");
+            }
+            return $http.post('/api/users/reset-password/' + token, {
+                password: password
+            }).then(function (res) {
+                return res.data;
+            });
+        };
+
+        service.getAllByRole = function (roleName) {
+            return $http.get('/api/users/role/' + roleName).then(function (res) {
                 return res.data;
             });
         };
@@ -7227,6 +7255,7 @@ angular
 
     UserService.$inject = [
         '$http',
+        '$q',
         'CrudFactory'
     ];
 
@@ -7880,57 +7909,102 @@ angular
 (function (angular) {
     'use strict';
 
-    function RegisterController($state, AuthService, MessageService) {
+    function RegisterRequestController($state, AuthService, MessageService, UserService) {
         var vm;
 
         vm = this;
         vm.formData = {};
+        vm.isWaiting = true;
+
+        UserService.getAllByRole('administrator').then(function (data) {
+            vm.administrators = data.value;
+            vm.isWaiting = false;
+        });
+
+        vm.mailTo = function (emailAddress) {
+            location.href = 'mailto:' + emailAddress + '?subject=Service Catalog > Editor Account Request';
+        };
 
         vm.submit = function () {
+            vm.isWaiting = true;
             AuthService
-                .register(vm.formData)
+                .createRegistrationRequest(vm.formData.emailAddress)
                 .then(function () {
                     $state.go('login');
+                    MessageService.success("New user registration request successfully sent!");
                 })
-                .catch(MessageService.handleError);
+                .catch(function (error) {
+                    vm.isWaiting = false;
+                    MessageService.handleError(error);
+                });
         };
     }
 
-    RegisterController.$inject = [
+    RegisterRequestController.$inject = [
         '$state',
         'AuthService',
-        'MessageService'
+        'MessageService',
+        'UserService'
     ];
 
     angular.module('capabilities-catalog')
-        .controller('RegisterController', RegisterController);
+        .controller('RegisterRequestController', RegisterRequestController);
 
 }(window.angular));
 
 (function (angular) {
     'use strict';
 
-    function ResetPasswordController($state, MessageService, UserService) {
+    function ResetPasswordController($state, AuthService, MessageService, UserService) {
         var vm;
 
         vm = this;
         vm.formData = {};
 
-        if ($state.params.token) {
-            console.log("TOKEN!", $state.params.token);
-        }
+        vm.token = $state.params.token;
+        vm.isWaiting = true;
 
-        vm.submit = function () {
+        UserService.getAllByRole('administrator').then(function (data) {
+            vm.administrators = data.value;
+            vm.isWaiting = false;
+        });
+
+        vm.mailTo = function (emailAddress) {
+            location.href = 'mailto:' + emailAddress + '?subject=Service Catalog > Editor Account Request';
+        };
+
+        vm.submitRequest = function () {
+            vm.isWaiting = true;
             UserService
                 .sendResetPasswordRequest(vm.formData.emailAddress)
                 .then(function () {
+                    $state.go('login');
                     MessageService.success('Password reset request successfully sent.');
                 })
-                .catch(MessageService.handleError);
+                .catch(function (error) {
+                    MessageService.handleError(error);
+                    vm.isWaiting = false;
+                });
+        };
+
+        vm.submitReset = function () {
+            vm.isWaiting = true;
+            UserService
+                .resetPassword($state.params.token, vm.formData.password, vm.formData.retypePassword)
+                .then(function () {
+                    $state.go('login');
+                    MessageService.success('Password reset successfully.');
+                })
+                .catch(function (error) {
+                    MessageService.handleError(error);
+                    vm.isWaiting = false;
+                });
         };
     }
 
     ResetPasswordController.$inject = [
+        '$state',
+        'AuthService',
         'MessageService',
         'UserService'
     ];
@@ -8145,20 +8219,22 @@ angular
 }(window.angular));
 
 angular.module('capabilities-catalog.templates', []).run(['$templateCache', function($templateCache) {
+    $templateCache.put('../public/app/views/help.html',
+        '<div class=page-header><h1>Help</h1></div>');
     $templateCache.put('../public/app/views/home.html',
         '<div class=page-header><h1>Service Catalog</h1></div>');
     $templateCache.put('../public/app/views/login.html',
-        '<div class=page-header><h1>Content Editor Login</h1></div><div bb-scroll-into-view=loginCtrl.scrollToTop><form name=loginForm id=form-login class=form-horizontal ng-submit=loginCtrl.submit() method=post novalidate><div class=form-group><label class="col-sm-2 control-label"></label><div class=col-sm-10><button type=button ng-click=loginCtrl.loginWithBlackbaud() class="btn btn-lg btn-primary">Login using Blackbaud.com</button></div></div><div class=form-group ng-class="{\'has-error\': loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid}"><label class="col-sm-2 control-label">Email Address:</label><div class=col-sm-10><input class=form-control id=email-address name=emailAddress ng-model=loginCtrl.formData.emailAddress placeholder=(required) required><div ng-show="loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid" class=help-block>Email Address is required.</div></div></div><div class=form-group ng-class="{\'has-error\': loginForm.password.$touched && loginForm.password.$invalid}"><label class="col-sm-2 control-label">Password:</label><div class=col-sm-10><input class=form-control type=password name=password ng-model=loginCtrl.formData.password placeholder=(required) required><div ng-show="loginForm.password.$touched && loginForm.password.$invalid" class=help-block>Password is required.</div></div></div><div class=form-group><label class="col-sm-2 control-label"></label><div class=col-sm-10><a href ui-sref=reset-password>Forgot your password?</a></div></div><div class="form-group form-buttons"><div class="col-sm-offset-2 col-sm-10"><button class="btn btn-primary btn-lg" id=login-form-button type=submit ng-disabled=loginForm.$invalid><i class="fa fa-login"></i>Log In</button> <a class="btn btn-default" href ui-sref=register>I need an account &rarr;</a></div></div></form></div>');
+        '<div class=page-header><h1>Content Editor Login</h1></div><div bb-scroll-into-view=loginCtrl.scrollToTop><form name=loginForm id=form-login class=form-horizontal ng-submit=loginCtrl.submit() method=post novalidate><div class=form-group><label class="col-sm-2 control-label"></label><div class=col-sm-10><button type=button ng-click=loginCtrl.loginWithBlackbaud() class="btn btn-lg btn-primary"><i class="fa fa-fw fa-globe"></i>Login using Blackbaud.com</button></div></div><div class=form-group ng-class="{\'has-error\': loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid}"><label class="col-sm-2 control-label">Email Address:</label><div class=col-sm-10><input class=form-control id=email-address name=emailAddress ng-model=loginCtrl.formData.emailAddress placeholder=(required) required><div ng-show="loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid" class=help-block>Email Address is required.</div></div></div><div class=form-group ng-class="{\'has-error\': loginForm.password.$touched && loginForm.password.$invalid}"><label class="col-sm-2 control-label">Password:</label><div class=col-sm-10><input class=form-control type=password name=password ng-model=loginCtrl.formData.password placeholder=(required) required><div ng-show="loginForm.password.$touched && loginForm.password.$invalid" class=help-block>Password is required.</div></div></div><div class=form-group><label class="col-sm-2 control-label"></label><div class=col-sm-10><a href ui-sref=reset-password>Forgot your password?</a></div></div><div class="form-group form-buttons"><div class="col-sm-offset-2 col-sm-10"><button class="btn btn-primary" id=login-form-button type=submit ng-disabled=loginForm.$invalid><i class="fa fa-fw fa-sign-in"></i>Log In</button> <a class="pull-right btn btn-default" href ui-sref=registration-request><i class="fa fa-fw fa-user-plus"></i>I need an account &rarr;</a></div></div></form></div>');
     $templateCache.put('../public/app/views/main.html',
-        '<div ng-if=oAuthCtrl.isReady><div ng-if=mainCtrl.isReady><header id=header><bb-navbar class="navbar navbar-inverse bb-navbar"><div class=container><ul ng-if=!mainCtrl.isLoggedIn() class="nav navbar-nav navbar-right"><li ui-sref-active=bb-navbar-active><a href ui-sref=login><i class="fa fa-fw fa-sign-in"></i>Editor Login</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=register><i class="fa fa-fw fa-user-plus"></i>Register</a></li></ul><ul ng-if=mainCtrl.isLoggedIn() class="nav navbar-nav navbar-right"><li ui-sref-active=bb-navbar-active><a href ui-sref=profile ng-bind=mainCtrl.user.emailAddress></a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.users>Users</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.roles>Roles</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.permissions>Permissions</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=logout>Log out</a></li></ul><ul class="nav navbar-nav navbar-right"><li ui-sref-active=bb-navbar-active><a href ui-sref=help><i class="fa fa-fw fa-question-circle"></i>Help</a></li></ul><ul class="nav navbar-nav navbar-left"><li ui-sref-active=bb-navbar-active><a href ui-sref=home>Home</a></li></ul></div></bb-navbar></header><div id=content><div class=container><ui-view></ui-view></div></div></div></div>');
+        '<div ng-if=oAuthCtrl.isReady><div ng-if=mainCtrl.isReady><header id=header><bb-navbar class="navbar navbar-inverse bb-navbar"><div class=container><ul ng-if=!mainCtrl.isLoggedIn() class="nav navbar-nav navbar-right"><li ui-sref-active=bb-navbar-active><a href ui-sref=login><i class="fa fa-fw fa-sign-in"></i>Editor Login</a></li></ul><ul ng-if=mainCtrl.isLoggedIn() class="nav navbar-nav navbar-right"><li class=dropdown><a href=# class=dropdown-toggle role=button><i class="fa fa-cog"></i><span ng-bind=mainCtrl.user.emailAddress></span><span class=caret></span></a><ul class=dropdown-menu role=menu><li ui-sref-active=bb-navbar-active><a href ui-sref=profile>Profile</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.users>Users</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.roles>Roles</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.permissions>Permissions</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=logout>Log out</a></li></ul></li></ul><ul class="nav navbar-nav navbar-right"><li ui-sref-active=bb-navbar-active><a href ui-sref=help><i class="fa fa-fw fa-question-circle"></i>Help</a></li></ul><ul class="nav navbar-nav navbar-left"><li ui-sref-active=bb-navbar-active><a href ui-sref=home>Home</a></li></ul></div></bb-navbar></header><div id=content><div class=container><ui-view></ui-view></div></div></div></div>');
     $templateCache.put('../public/app/views/permissions.html',
         '<div class=page-header><h1>Permissions</h1></div><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=permissionsCtrl.submit()><div class=form-group><input class=form-control id=field-permission placeholder=MY_PERMISSION ng-model=permissionsCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td></tr><tr><th>Name</th><th>ID</th><th></th></tr><tr ng-repeat="permission in permissionsCtrl.permissions | orderBy:\'name\':false track by $index"><td><form ng-if=permission.showEditor ng-submit=permissionsCtrl.update(permission)><div class=form-group><input ng-model=permission.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="permission.showEditor=false">Cancel</button></form><span ng-if=!permission.showEditor ng-click="permission.showEditor=true"><i class="fa fa-fw fa-pencil"></i> <span ng-bind=permission.name></span></span></td><td ng-bind=permission._id></td><td><button class="btn btn-xs btn-default" ng-click=permissionsCtrl.delete($index)><i class="fa fa-trash"></i>Delete</button></td></tr></table>');
     $templateCache.put('../public/app/views/profile.html',
         '<div class=page-header><h1>My Profile</h1></div><table class="table table-striped"><tr><td style=width:25%>Email Address</td><td><i class="fa fa-fw fa-envelope"></i> <span ng-bind=profileCtrl.user.emailAddress></span></td></tr><tr><td>ID</td><td><i class="fa fa-fw fa-user"></i> <span ng-bind=profileCtrl.user._id></span></td></tr><tr><td>Role</td><td><i class="fa fa-fw fa-certificate"></i> <span ng-bind=profileCtrl.user.role></span></td></tr></table>');
-    $templateCache.put('../public/app/views/register.html',
-        '<div class=page-header><h1>Register for an Editor Account</h1></div><form class=form ng-submit=registerCtrl.submit()><div class=form-group><label for=field-email-address>Email address</label><input type=email class=form-control id=field-email-address ng-model=registerCtrl.formData.emailAddress></div><div class=form-group><label for=field-password>Password</label><input type=password class=form-control id=field-password ng-model=registerCtrl.formData.password></div><div class=form-group><button type=submit class="btn btn-primary">Register</button></div></form>');
+    $templateCache.put('../public/app/views/register-request.html',
+        '<div class=page-header><h1>Request an Editor Account</h1></div><div class=well><p>Provide your Blackbaud.com email address below to request an editor account. If you do not get a reply <b>within 24 hours</b>, please reach out to one of the Service Catalog administrators:</p><ul><li ng-repeat="user in registerRequestCtrl.administrators track by $index"><a href ng-click=registerRequestCtrl.mailTo(user.emailAddress) ng-bind=user.emailAddress></a></li></ul></div><form bb-wait=registerRequestCtrl.isWaiting name=registerRequestForm id=form-register-request class=form-horizontal ng-submit=registerRequestCtrl.submit()><div class=form-group ng-class="{\'has-error\': registerRequestForm.emailAddress.$touched && registerRequestForm.emailAddress.$invalid}"><label class="col-sm-2 control-label">Email Address:</label><div class=col-sm-10><input class=form-control id=email-address name=emailAddress ng-model=registerRequestCtrl.formData.emailAddress placeholder=(required) required><div ng-show="registerRequestForm.emailAddress.$touched && registerRequestForm.emailAddress.$invalid" class=help-block>Email Address is required.</div></div></div><div class="form-group form-buttons"><div class="col-sm-offset-2 col-sm-10"><button class="btn btn-primary btn-lg" type=submit ng-disabled=registerRequestForm.$invalid>Send Request</button> <a class="btn btn-default" href ui-sref=login>I already have an account &rarr;</a></div></div></form>');
     $templateCache.put('../public/app/views/reset-password.html',
-        '<div class=page-header><h1>Reset Your Password</h1></div><form class=form ng-submit=resetPasswordCtrl.submit()><div class=form-group><label for=field-email-address>Email address</label><input type=email class=form-control id=field-email-address ng-model=resetPasswordCtrl.formData.emailAddress></div><div class=form-group><button type=submit class="btn btn-primary">Send</button></div></form>');
+        '<div class=page-header><h1>Reset Your Password</h1></div><div ng-if=!resetPasswordCtrl.token><div class=well><p>Provide your Blackbaud.com email address below to request a password reset. If you do not get a reply <b>within 24 hours</b>, please reach out to one of the Service Catalog administrators:</p><ul><li ng-repeat="user in resetPasswordCtrl.administrators track by $index"><a href ng-click=resetPasswordCtrl.mailTo(user.emailAddress) ng-bind=user.emailAddress></a></li></ul></div><form bb-wait=resetPasswordCtrl.isWaiting name=resetRequestForm id=form-reset-password class=form-horizontal ng-submit=resetPasswordCtrl.submitRequest()><div class=form-group ng-class="{\'has-error\': resetRequestForm.emailAddress.$touched && resetRequestForm.emailAddress.$invalid}"><label class="col-sm-2 control-label">Email Address:</label><div class=col-sm-10><input class=form-control id=email-address name=emailAddress ng-model=resetPasswordCtrl.formData.emailAddress placeholder=(required) required><div ng-show="resetRequestForm.emailAddress.$touched && resetRequestForm.emailAddress.$invalid" class=help-block>Email Address is required.</div></div></div><div class="form-group form-buttons"><div class="col-sm-offset-2 col-sm-10"><button class="btn btn-primary btn-lg" type=submit ng-disabled=resetRequestForm.$invalid>Send Request</button></div></div></form></div><div ng-if=resetPasswordCtrl.token><form bb-wait=resetPasswordCtrl.isWaiting name=resetPasswordForm id=form-reset-password class=form-horizontal ng-submit=resetPasswordCtrl.submitReset()><div class=form-group ng-class="{\'has-error\': resetPasswordForm.password.$touched && resetPasswordForm.password.$invalid}"><label class="col-sm-2 control-label">Password:</label><div class=col-sm-10><input class=form-control type=password name=password ng-model=resetPasswordCtrl.formData.password placeholder=(required) required><div ng-show="resetPasswordForm.password.$touched && resetPasswordForm.password.$invalid" class=help-block>Password is required.</div></div></div><div class=form-group ng-class="{\'has-error\': resetPasswordForm.retypePassword.$touched && resetPasswordForm.retypePassword.$invalid}"><label class="col-sm-2 control-label">Retype Password:</label><div class=col-sm-10><input class=form-control type=password name=retypePassword ng-model=resetPasswordCtrl.formData.retypePassword placeholder=(required) required><div ng-show="resetPasswordForm.retypePassword.$touched && resetPasswordForm.retypePassword.$invalid" class=help-block>Retype Password is required.</div></div></div><div class="form-group form-buttons"><div class="col-sm-offset-2 col-sm-10"><button class="btn btn-primary btn-lg" type=submit ng-disabled=resetPasswordForm.$invalid>Submit</button></div></div></form></div>');
     $templateCache.put('../public/app/views/roles.html',
         '<div class=page-header><h1>Roles</h1></div><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=rolesCtrl.createRole()><div class=form-group><input class=form-control id=field-role placeholder="e.g. admin" ng-model=rolesCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td><td></td></tr><tr><th>Name</th><th>Permissions</th><th></th><th></th></tr><tr ng-repeat="role in rolesCtrl.roles"><td><form ng-if=role.showEditor ng-submit=rolesCtrl.updateRole(role)><div class=form-group><input ng-model=role.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="role.showEditor=false">Cancel</button></form><span ng-if=!role.showEditor ng-click="role.showEditor=true"><i class="fa fa-fw fa-pencil"></i> <span ng-bind=role.name></span></span></td><td><form ng-submit=rolesCtrl.updateRole(role)><div class=checkbox ng-repeat="permission in rolesCtrl.permissions"><label><input type=checkbox ng-checked="role._permissions.indexOf(permission._id) > -1" ng-click="rolesCtrl.toggleSelection(role, permission._id)"><span ng-bind=permission.name></span></label></div><div class=form-group><button type=submit class="btn btn-xs btn-primary">Update Permissions</button></div></form></td><td><label><input ng-disabled="role.name === \'admin\'" type=checkbox ng-checked=role.isDefault ng-click=rolesCtrl.updateDefaultRole($index)> Default</label></td><td><button class="btn btn-xs btn-default" ng-click=rolesCtrl.delete($index)><i class="fa fa-trash"></i>Delete</button></td></tr></table>');
     $templateCache.put('../public/app/views/user-form.html',

@@ -7,25 +7,29 @@
               <li ui-sref-active="bb-navbar-active">
                 <a href ui-sref="login"><i class="fa fa-fw fa-sign-in"></i>Editor Login</a>
               </li>
-              <li ui-sref-active="bb-navbar-active">
-                <a href ui-sref="register"><i class="fa fa-fw fa-user-plus"></i>Register</a>
-              </li>
             </ul>
             <ul ng-if="mainCtrl.isLoggedIn()" class="nav navbar-nav navbar-right">
-              <li ui-sref-active="bb-navbar-active">
-                <a href ui-sref="profile" ng-bind="mainCtrl.user.emailAddress"></a>
-              </li>
-              <li ui-sref-active="bb-navbar-active">
-                <a href ui-sref="admin.users">Users</a>
-              </li>
-              <li ui-sref-active="bb-navbar-active">
-                <a href ui-sref="admin.roles">Roles</a>
-              </li>
-              <li ui-sref-active="bb-navbar-active">
-                <a href ui-sref="admin.permissions">Permissions</a>
-              </li>
-              <li ui-sref-active="bb-navbar-active">
-                <a href ui-sref="logout">Log out</a>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" role="button">
+                  <i class="fa fa-cog"></i><span ng-bind="mainCtrl.user.emailAddress"></span><span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu" role="menu">
+                  <li ui-sref-active="bb-navbar-active">
+                    <a href ui-sref="profile">Profile</a>
+                  </li>
+                  <li ui-sref-active="bb-navbar-active">
+                    <a href ui-sref="admin.users">Users</a>
+                  </li>
+                  <li ui-sref-active="bb-navbar-active">
+                    <a href ui-sref="admin.roles">Roles</a>
+                  </li>
+                  <li ui-sref-active="bb-navbar-active">
+                    <a href ui-sref="admin.permissions">Permissions</a>
+                  </li>
+                  <li ui-sref-active="bb-navbar-active">
+                    <a href ui-sref="logout">Log out</a>
+                  </li>
+                </ul>
               </li>
             </ul>
             <ul class="nav navbar-nav navbar-right">

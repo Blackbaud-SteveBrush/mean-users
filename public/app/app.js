@@ -3,7 +3,7 @@
 
     function ConfigOmnibar(bbOmnibarConfig) {
         bbOmnibarConfig.serviceName = 'Service Catalog';
-        bbOmnibarConfig.signInRedirectUrl = window.location.href;
+        bbOmnibarConfig.signInRedirectUrl = location.href;
         bbOmnibarConfig.url = 'https://signin.blackbaud.com/omnibar.min.js';
     }
 
@@ -32,6 +32,11 @@
                 templateUrl: '../public/app/views/home.html',
                 controller: 'HomeController as homeCtrl'
             })
+            .state('help', {
+                url: 'help',
+                parent: 'oauth',
+                templateUrl: '../public/app/views/help.html'
+            })
             .state('login', {
                 url: 'login',
                 parent: 'oauth',
@@ -43,11 +48,11 @@
                 parent: 'oauth',
                 controller: 'LogoutController'
             })
-            .state('register', {
-                url: 'register',
+            .state('registration-request', {
+                url: 'registration-request',
                 parent: 'oauth',
-                templateUrl: '../public/app/views/register.html',
-                controller: 'RegisterController as registerCtrl'
+                templateUrl: '../public/app/views/register-request.html',
+                controller: 'RegisterRequestController as registerRequestCtrl'
             })
             .state('reset-password', {
                 url: 'reset-password/:token',
@@ -73,7 +78,7 @@
                 template: '<ui-view/>',
                 data: {
                     restrictions: {
-                        role: 'admin'
+                        role: 'administrator'
                     }
                 }
             })

@@ -48,7 +48,7 @@
             if (user === null) {
                 return false;
             }
-            if (user.role === 'admin') {
+            if (user.role === 'administrator') {
                 return true;
             }
             return (user.permissions.indexOf(permission) > -1);
@@ -61,7 +61,7 @@
             if (user === null) {
                 return false;
             }
-            if (user.role === 'admin') {
+            if (user.role === 'administrator') {
                 return true;
             }
             return (user.role === role);
@@ -130,6 +130,16 @@
         service.register = function (data) {
             return $http
                 .post('/api/register', data)
+                .then(function (res) {
+                    return res.data;
+                });
+        };
+
+        service.createRegistrationRequest = function (emailAddress) {
+            return $http
+                .post('/api/registration-request/', {
+                    emailAddress: emailAddress
+                })
                 .then(function (res) {
                     return res.data;
                 });

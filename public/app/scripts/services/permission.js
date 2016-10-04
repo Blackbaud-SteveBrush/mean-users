@@ -2,8 +2,7 @@
     'use strict';
 
     function PermissionService(CrudFactory) {
-        var service;
-        service = CrudFactory.instantiate({
+        return CrudFactory.instantiate({
             endpointResourceName: 'permissions',
             authorization: {
                 delete: {
@@ -13,14 +12,10 @@
                     permission: 'CREATE_PERMISSION'
                 },
                 put: {
-                    permission: 'UPDATE_PERMISSION'
+                    permission: 'EDIT_PERMISSION'
                 }
             }
         });
-        service.getAll().then(function (data) {
-            console.log("PERMISSIONS:", data.value);
-        });
-        return service;
     }
 
     PermissionService.$inject = [

@@ -14,8 +14,26 @@ function Service(options) {
 
 utils.mixin(Service, DatabaseObject);
 
+Service.prototype.create = function (data) {
+    if (!data.password) {
+        data.password = this.getRandomPassword();
+    }
+    return this.register(data.emailAddress, data.password, data._role);
+};
+
 Service.prototype.getAll = function () {
     return this.settings.model.find({}).populate('_role').exec();
+};
+
+Service.prototype.getAllByRole = function (roleName) {
+    roleName = roleName.toLowerCase();
+    return this.getAll().then(function (users) {
+        var byRole;
+        byRole = users.filter(function (user) {
+            return (user._role.name.toLowerCase() === roleName);
+        });
+        return Promise.resolve(byRole);
+    });
 };
 
 Service.prototype.getByEmailAddress = function (emailAddress) {
@@ -29,15 +47,19 @@ Service.prototype.getByEmailAddress = function (emailAddress) {
     });
 };
 
-Service.prototype.getRandomPassword = function () {
-    return randomstring.generate(4) + ' ' + randomstring.generate(4) + ' ' + randomstring.generate(4);
+Service.prototype.getByResetPasswordToken = function (token) {
+    return this.settings.model.findOne({
+        'resetPasswordToken': token
+    }).exec().then(function (user) {
+        if (!user) {
+            return Promise.reject(new Error("User not found with that token!"));
+        }
+        return Promise.resolve(user);
+    });
 };
 
-Service.prototype.create = function (data) {
-    if (!data.password) {
-        data.password = this.getRandomPassword();
-    }
-    return this.register(data.emailAddress, data.password, data._role);
+Service.prototype.getRandomPassword = function () {
+    return randomstring.generate(4) + ' ' + randomstring.generate(4) + ' ' + randomstring.generate(4);
 };
 
 Service.prototype.register = function (emailAddress, password, roleId) {
@@ -79,7 +101,7 @@ Service.prototype.register = function (emailAddress, password, roleId) {
     }
 };
 
-Service.prototype.sendResetPasswordRequest = function (emailAddress) {
+Service.prototype.createResetPasswordToken = function (emailAddress) {
     var self;
 
     self = this;
@@ -89,8 +111,8 @@ Service.prototype.sendResetPasswordRequest = function (emailAddress) {
             if (!user) {
                 return Promise.reject(new Error("That email address wasn't found in our records."));
             }
-            user.password = self.getRandomPassword();
-            user.resetPasswordToken = sha1(emailAddress + ':' + user.password + Date.now());
+            user.resetPasswordToken = sha1(emailAddress + ':' + Date.now());
+
             return user.save();
         });
 };

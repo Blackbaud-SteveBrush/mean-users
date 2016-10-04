@@ -11,7 +11,6 @@
             hashPairs;
 
         hash = $window.location.href.split('?')[1];
-        console.log($window.location.href, $window.location.href.split('?'));
         hashArray = hash.split('&');
         hashPairs = {};
 
