@@ -3,9 +3,7 @@
 
     function LogoutController($state, AuthService) {
         AuthService.logout().then(function () {
-            $state.go('login', {}, {
-                reload: true
-            });
+            $state.go('login');
         });
     }
 

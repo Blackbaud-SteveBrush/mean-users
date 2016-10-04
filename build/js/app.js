@@ -6401,10 +6401,6 @@ angular
 
         // Views that do not require OAuth.
         $stateProvider
-            .state('logout', {
-                url: '/logout',
-                controller: 'LogoutController'
-            })
             .state('validate', {
                 url: '/oauth/?validate=&id_token&state',
                 template: '',
@@ -6415,7 +6411,7 @@ angular
         $stateProvider
             .state('oauth', {
                 url: '/',
-                templateUrl: '../public/app/views/app.html',
+                templateUrl: '../public/app/views/main.html',
                 controller: 'OAuthController as oAuthCtrl'
             })
             .state('home', {
@@ -6428,7 +6424,12 @@ angular
                 url: 'login',
                 parent: 'oauth',
                 templateUrl: '../public/app/views/login.html',
-                controller: 'LoginPageController as loginPageCtrl'
+                controller: 'LoginController as loginCtrl'
+            })
+            .state('logout', {
+                url: '/logout',
+                parent: 'oauth',
+                controller: 'LogoutController'
             })
             .state('register', {
                 url: 'register',
@@ -6515,23 +6516,15 @@ angular
 
                         if (!data.isLoggedIn || AuthService.isAuthorized(toState.data.restrictions.permission) === false || AuthService.isRole(toState.data.restrictions.role) === false) {
                             MessageService.error("You are not authorized to view that page.");
-                            $state.go('login', {}, { reload: true });
+                            $state.go('login');
                             return;
                         }
                     }
 
                     bypass = true;
                     $state.go(toState, toParams);
-                }).catch(MessageService.handleError);
-        });
-
-        // Store the previous state, for login redirects.
-        $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
-            $state.previous = {
-                name: fromState.name,
-                params: fromParams
-            };
-            $rootScope.$broadcast('ccAuthorizationSuccess');
+                })
+                .catch(MessageService.handleError);
         });
 
         bbOmnibarConfig.userLoaded = function (data) {
@@ -6585,41 +6578,9 @@ angular
 (function (angular) {
     'use strict';
 
-    function AppController($scope, $state, $timeout, AuthService) {
-        var vm;
-
-        vm = this;
-        vm.isLoggedIn = AuthService.isLoggedIn;
-        vm.isAuthorized = AuthService.isAuthorized;
-
-        $scope.$on('ccAuthorizationSuccess', function () {
-            vm.isReady = true;
-            $timeout(function () {
-                vm.user = AuthService.getUser();
-            });
-        });
-    }
-
-    AppController.$inject = [
-        '$scope',
-        '$state',
-        '$timeout',
-        'AuthService'
-    ];
-
-    angular.module('capabilities-catalog')
-        .controller('AppController', AppController);
-
-}(window.angular));
-
-(function (angular) {
-    'use strict';
-
     function LogoutController($state, AuthService) {
         AuthService.logout().then(function () {
-            $state.go('login', {}, {
-                reload: true
-            });
+            $state.go('login');
         });
     }
 
@@ -6657,7 +6618,6 @@ angular
             vm.isReady = false;
 
             // Don't validate the token on the OAuth redirect.
-            console.log("Checking current state...", $state.$current.name);
             if ($state.$current.name === 'validate') {
                 return;
             }
@@ -6669,7 +6629,6 @@ angular
                     .then(AuthService.redirect);
             } else {
                 console.log("Already logged in to blackbaud.com.");
-                //console.log("Logged in!", user, AuthService.getAccessToken());
                 AuthService
                     .validateToken()
                     .then(function () {
@@ -6712,6 +6671,7 @@ angular
             hashPairs;
 
         hash = $window.location.href.split('?')[1];
+        console.log($window.location.href, $window.location.href.split('?'));
         hashArray = hash.split('&');
         hashPairs = {};
 
@@ -6997,7 +6957,7 @@ angular
 (function (angular) {
     'use strict';
 
-    function MessageService($timeout, bbModal, bbToast) {
+    function MessageService($timeout, AuthService, bbModal, bbToast) {
         var service;
 
         service = this;
@@ -7011,7 +6971,8 @@ angular
             defaults = {
                 templateUrl: "../public/app/components/toasts/toast.html",
                 controller: "ToastMessageController as toastCtrl",
-                requestLogin: false
+                requestLogin: false,
+                icon: 'fa-question-circle-o'
             };
 
             if (typeof options !== 'object') {
@@ -7102,7 +7063,7 @@ angular
             }
             if (typeof error === 'string') {
                 service.error(error);
-            } else if (error.status === 401) {
+            } else if (error.status === 401 && !AuthService.isLoggedIn()) {
                 service.info({
                     message: error.data.message,
                     requestLogin: true
@@ -7129,6 +7090,7 @@ angular
 
     MessageService.$inject = [
         '$timeout',
+        'AuthService',
         'bbModal',
         'bbToast'
     ];
@@ -7141,7 +7103,8 @@ angular
     'use strict';
 
     function PermissionService(CrudFactory) {
-        return CrudFactory.instantiate({
+        var service;
+        service = CrudFactory.instantiate({
             endpointResourceName: 'permissions',
             authorization: {
                 delete: {
@@ -7155,6 +7118,10 @@ angular
                 }
             }
         });
+        service.getAll().then(function (data) {
+            console.log("PERMISSIONS:", data.value);
+        });
+        return service;
     }
 
     PermissionService.$inject = [
@@ -7577,95 +7544,6 @@ angular
 (function (angular) {
     'use strict';
 
-    function ccLoginForm() {
-        return {
-            restrict: 'E',
-            scope: true,
-            bindToController: {
-                onSuccess: '='
-            },
-            controller: 'LoginFormController as formCtrl',
-            templateUrl: '../public/app/components/forms/login/login-form.html'
-        };
-    }
-
-    function LoginFormController(AuthService, MessageService) {
-        var vm;
-
-        vm = this;
-
-        vm.submit = function () {
-            AuthService
-                .login(vm.formData.emailAddress, vm.formData.password)
-                .then(function () {
-                    if (vm.onSuccess) {
-                        vm.onSuccess.call();
-                    }
-                })
-                .catch(MessageService.handleError);
-        };
-
-        vm.loginWithBlackbaud = function () {
-            AuthService
-                .loginWithToken()
-                .then(function () {
-                    if (vm.onSuccess) {
-                        vm.onSuccess.call();
-                    }
-                })
-                .catch(MessageService.handleError);
-        };
-    }
-
-    LoginFormController.$inject = [
-        'AuthService',
-        'MessageService'
-    ];
-
-    angular.module('capabilities-catalog')
-        .controller('LoginFormController', LoginFormController)
-        .directive('ccLoginForm', ccLoginForm);
-
-}(window.angular));
-
-(function (angular) {
-    'use strict';
-
-    function LoginModalController($rootScope, $scope, $timeout, MessageService) {
-        var vm;
-
-        vm = this;
-
-        vm.login = function () {
-            $timeout(function () {
-                angular.element(document.querySelector('#form-login')).triggerHandler('submit');
-            }, 100);
-        };
-
-        vm.onSuccess = function () {
-            $scope.$dismiss('success');
-            $rootScope.$broadcast('modalLoginSuccess');
-            MessageService.closeAll();
-            MessageService.success("Log in successful!");
-        };
-    }
-
-    LoginModalController.$inject = [
-        '$rootScope',
-        '$scope',
-        '$timeout',
-        'MessageService'
-    ];
-
-
-    angular.module('capabilities-catalog')
-        .controller('LoginModalController', LoginModalController);
-
-}(window.angular));
-
-(function (angular) {
-    'use strict';
-
     function ccProductList() {
         return {
             restrict: 'E',
@@ -7868,30 +7746,70 @@ angular
 (function (angular) {
     'use strict';
 
-    function LoginPageController($state) {
+    function LoginController($state, AuthService, MessageService) {
         var vm;
+
         vm = this;
-        vm.redirect = function () {
-            var params,
-                state;
+        vm.formData = {};
 
-            state = $state.previous.name;
-            params = $state.previous.params;
+        function onSuccess() {
+            $state.go('home');
+        }
 
-            if (!state || state === 'login') {
-                state = 'home';
-                params = {};
-            }
-            $state.go(state, params, { reload: true });
+        vm.submit = function () {
+            AuthService
+                .login(vm.formData.emailAddress, vm.formData.password)
+                .then(onSuccess)
+                .catch(MessageService.handleError);
+        };
+
+        vm.loginWithBlackbaud = function () {
+            AuthService
+                .loginWithToken()
+                .then(onSuccess)
+                .catch(function () {
+                    AuthService.redirect();
+                });
         };
     }
 
-    LoginPageController.$inject = [
-        '$state'
+    LoginController.$inject = [
+        '$state',
+        'AuthService',
+        'MessageService'
     ];
 
     angular.module('capabilities-catalog')
-        .controller('LoginPageController', LoginPageController);
+        .controller('LoginController', LoginController);
+
+}(window.angular));
+
+(function (angular) {
+    'use strict';
+
+    function MainController($scope, $timeout, AuthService) {
+        var vm;
+
+        vm = this;
+        vm.isLoggedIn = AuthService.isLoggedIn;
+        vm.isAuthorized = AuthService.isAuthorized;
+
+        $scope.$on('$stateChangeSuccess', function () {
+            vm.isReady = true;
+            $timeout(function () {
+                vm.user = AuthService.getUser();
+            });
+        });
+    }
+
+    MainController.$inject = [
+        '$scope',
+        '$timeout',
+        'AuthService'
+    ];
+
+    angular.module('capabilities-catalog')
+        .controller('MainController', MainController);
 
 }(window.angular));
 
@@ -7906,7 +7824,7 @@ angular
 
         PermissionService.getAll().then(function (data) {
             vm.permissions = data.value;
-        });
+        }).catch(MessageService.handleError);
 
         vm.submit = function () {
             PermissionService.create(vm.formData).then(function (data) {
@@ -8227,26 +8145,26 @@ angular
 }(window.angular));
 
 angular.module('capabilities-catalog.templates', []).run(['$templateCache', function($templateCache) {
-    $templateCache.put('../public/app/views/app.html',
-        '<div ng-if=oAuthCtrl.isReady><div ng-if=appCtrl.isReady><header id=header><bb-navbar class="navbar navbar-inverse bb-navbar"><div class=container><ul ng-if=!appCtrl.isLoggedIn() class="nav navbar-nav navbar-right"><li ui-sref-active=bb-navbar-active><a href ui-sref=login>Log in</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=register>Register</a></li></ul><ul ng-if=appCtrl.isLoggedIn() class="nav navbar-nav navbar-right"><li ui-sref-active=bb-navbar-active><a href ui-sref=profile ng-bind=appCtrl.user.emailAddress></a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.users>Users</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.roles>Roles</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.permissions>Permissions</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=logout>Log out</a></li></ul><ul class="nav navbar-nav navbar-left"><li ui-sref-active=bb-navbar-active><a href ui-sref=home>Home</a></li></ul></div></bb-navbar></header><div id=content><div class=container><ui-view></ui-view></div></div></div></div>');
     $templateCache.put('../public/app/views/home.html',
-        'Home');
+        '<div class=page-header><h1>Service Catalog</h1></div>');
     $templateCache.put('../public/app/views/login.html',
-        '<h1>Content Editor Login</h1><cc-login-form on-success=loginPageCtrl.redirect></cc-login-form>');
+        '<div class=page-header><h1>Content Editor Login</h1></div><div bb-scroll-into-view=loginCtrl.scrollToTop><form name=loginForm id=form-login class=form-horizontal ng-submit=loginCtrl.submit() method=post novalidate><div class=form-group><label class="col-sm-2 control-label"></label><div class=col-sm-10><button type=button ng-click=loginCtrl.loginWithBlackbaud() class="btn btn-lg btn-primary">Login using Blackbaud.com</button></div></div><div class=form-group ng-class="{\'has-error\': loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid}"><label class="col-sm-2 control-label">Email Address:</label><div class=col-sm-10><input class=form-control id=email-address name=emailAddress ng-model=loginCtrl.formData.emailAddress placeholder=(required) required><div ng-show="loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid" class=help-block>Email Address is required.</div></div></div><div class=form-group ng-class="{\'has-error\': loginForm.password.$touched && loginForm.password.$invalid}"><label class="col-sm-2 control-label">Password:</label><div class=col-sm-10><input class=form-control type=password name=password ng-model=loginCtrl.formData.password placeholder=(required) required><div ng-show="loginForm.password.$touched && loginForm.password.$invalid" class=help-block>Password is required.</div></div></div><div class=form-group><label class="col-sm-2 control-label"></label><div class=col-sm-10><a href ui-sref=reset-password>Forgot your password?</a></div></div><div class="form-group form-buttons"><div class="col-sm-offset-2 col-sm-10"><button class="btn btn-primary btn-lg" id=login-form-button type=submit ng-disabled=loginForm.$invalid><i class="fa fa-login"></i>Log In</button> <a class="btn btn-default" href ui-sref=register>I need an account &rarr;</a></div></div></form></div>');
+    $templateCache.put('../public/app/views/main.html',
+        '<div ng-if=oAuthCtrl.isReady><div ng-if=mainCtrl.isReady><header id=header><bb-navbar class="navbar navbar-inverse bb-navbar"><div class=container><ul ng-if=!mainCtrl.isLoggedIn() class="nav navbar-nav navbar-right"><li ui-sref-active=bb-navbar-active><a href ui-sref=login><i class="fa fa-fw fa-sign-in"></i>Editor Login</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=register><i class="fa fa-fw fa-user-plus"></i>Register</a></li></ul><ul ng-if=mainCtrl.isLoggedIn() class="nav navbar-nav navbar-right"><li ui-sref-active=bb-navbar-active><a href ui-sref=profile ng-bind=mainCtrl.user.emailAddress></a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.users>Users</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.roles>Roles</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.permissions>Permissions</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=logout>Log out</a></li></ul><ul class="nav navbar-nav navbar-right"><li ui-sref-active=bb-navbar-active><a href ui-sref=help><i class="fa fa-fw fa-question-circle"></i>Help</a></li></ul><ul class="nav navbar-nav navbar-left"><li ui-sref-active=bb-navbar-active><a href ui-sref=home>Home</a></li></ul></div></bb-navbar></header><div id=content><div class=container><ui-view></ui-view></div></div></div></div>');
     $templateCache.put('../public/app/views/permissions.html',
-        '<h1>Permissions</h1><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=permissionsCtrl.submit()><div class=form-group><input class=form-control id=field-permission placeholder=MY_PERMISSION ng-model=permissionsCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td></tr><tr><th>Name</th><th>ID</th><th></th></tr><tr ng-repeat="permission in permissionsCtrl.permissions | orderBy:\'name\':false track by $index"><td><form ng-if=permission.showEditor ng-submit=permissionsCtrl.update(permission)><div class=form-group><input ng-model=permission.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="permission.showEditor=false">Cancel</button></form><span ng-if=!permission.showEditor ng-click="permission.showEditor=true"><i class="fa fa-fw fa-pencil"></i> <span ng-bind=permission.name></span></span></td><td ng-bind=permission._id></td><td><button class="btn btn-xs btn-default" ng-click=permissionsCtrl.delete($index)><i class="fa fa-trash"></i>Delete</button></td></tr></table>');
+        '<div class=page-header><h1>Permissions</h1></div><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=permissionsCtrl.submit()><div class=form-group><input class=form-control id=field-permission placeholder=MY_PERMISSION ng-model=permissionsCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td></tr><tr><th>Name</th><th>ID</th><th></th></tr><tr ng-repeat="permission in permissionsCtrl.permissions | orderBy:\'name\':false track by $index"><td><form ng-if=permission.showEditor ng-submit=permissionsCtrl.update(permission)><div class=form-group><input ng-model=permission.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="permission.showEditor=false">Cancel</button></form><span ng-if=!permission.showEditor ng-click="permission.showEditor=true"><i class="fa fa-fw fa-pencil"></i> <span ng-bind=permission.name></span></span></td><td ng-bind=permission._id></td><td><button class="btn btn-xs btn-default" ng-click=permissionsCtrl.delete($index)><i class="fa fa-trash"></i>Delete</button></td></tr></table>');
     $templateCache.put('../public/app/views/profile.html',
-        '<h1>My Profile</h1><table class="table table-striped"><tr><td style=width:25%>Email Address</td><td><i class="fa fa-fw fa-envelope"></i> <span ng-bind=profileCtrl.user.emailAddress></span></td></tr><tr><td>ID</td><td><i class="fa fa-fw fa-user"></i> <span ng-bind=profileCtrl.user._id></span></td></tr><tr><td>Role</td><td><i class="fa fa-fw fa-certificate"></i> <span ng-bind=profileCtrl.user.role></span></td></tr></table>');
+        '<div class=page-header><h1>My Profile</h1></div><table class="table table-striped"><tr><td style=width:25%>Email Address</td><td><i class="fa fa-fw fa-envelope"></i> <span ng-bind=profileCtrl.user.emailAddress></span></td></tr><tr><td>ID</td><td><i class="fa fa-fw fa-user"></i> <span ng-bind=profileCtrl.user._id></span></td></tr><tr><td>Role</td><td><i class="fa fa-fw fa-certificate"></i> <span ng-bind=profileCtrl.user.role></span></td></tr></table>');
     $templateCache.put('../public/app/views/register.html',
-        '<h1>Register</h1><form class=form ng-submit=registerCtrl.submit()><div class=form-group><label for=field-email-address>Email address</label><input type=email class=form-control id=field-email-address ng-model=registerCtrl.formData.emailAddress></div><div class=form-group><label for=field-password>Password</label><input type=password class=form-control id=field-password ng-model=registerCtrl.formData.password></div><div class=form-group><button type=submit class="btn btn-primary">Register</button></div></form>');
+        '<div class=page-header><h1>Register for an Editor Account</h1></div><form class=form ng-submit=registerCtrl.submit()><div class=form-group><label for=field-email-address>Email address</label><input type=email class=form-control id=field-email-address ng-model=registerCtrl.formData.emailAddress></div><div class=form-group><label for=field-password>Password</label><input type=password class=form-control id=field-password ng-model=registerCtrl.formData.password></div><div class=form-group><button type=submit class="btn btn-primary">Register</button></div></form>');
     $templateCache.put('../public/app/views/reset-password.html',
-        '<h1>Reset Your Password</h1><form class=form ng-submit=resetPasswordCtrl.submit()><div class=form-group><label for=field-email-address>Email address</label><input type=email class=form-control id=field-email-address ng-model=resetPasswordCtrl.formData.emailAddress></div><div class=form-group><button type=submit class="btn btn-primary">Send</button></div></form>');
+        '<div class=page-header><h1>Reset Your Password</h1></div><form class=form ng-submit=resetPasswordCtrl.submit()><div class=form-group><label for=field-email-address>Email address</label><input type=email class=form-control id=field-email-address ng-model=resetPasswordCtrl.formData.emailAddress></div><div class=form-group><button type=submit class="btn btn-primary">Send</button></div></form>');
     $templateCache.put('../public/app/views/roles.html',
-        '<h1>Roles</h1><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=rolesCtrl.createRole()><div class=form-group><input class=form-control id=field-role placeholder="e.g. admin" ng-model=rolesCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td><td></td></tr><tr><th>Name</th><th>Permissions</th><th></th><th></th></tr><tr ng-repeat="role in rolesCtrl.roles"><td><form ng-if=role.showEditor ng-submit=rolesCtrl.updateRole(role)><div class=form-group><input ng-model=role.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="role.showEditor=false">Cancel</button></form><span ng-if=!role.showEditor ng-click="role.showEditor=true"><i class="fa fa-fw fa-pencil"></i> <span ng-bind=role.name></span></span></td><td><form ng-submit=rolesCtrl.updateRole(role)><div class=checkbox ng-repeat="permission in rolesCtrl.permissions"><label><input type=checkbox ng-checked="role._permissions.indexOf(permission._id) > -1" ng-click="rolesCtrl.toggleSelection(role, permission._id)"><span ng-bind=permission.name></span></label></div><div class=form-group><button type=submit class="btn btn-xs btn-primary">Update Permissions</button></div></form></td><td><label><input ng-disabled="role.name === \'admin\'" type=checkbox ng-checked=role.isDefault ng-click=rolesCtrl.updateDefaultRole($index)> Default</label></td><td><button class="btn btn-xs btn-default" ng-click=rolesCtrl.delete($index)><i class="fa fa-trash"></i>Delete</button></td></tr></table>');
+        '<div class=page-header><h1>Roles</h1></div><table class="table table-striped"><tr><td><form class="form form-inline" ng-submit=rolesCtrl.createRole()><div class=form-group><input class=form-control id=field-role placeholder="e.g. admin" ng-model=rolesCtrl.formData.name> <button type=submit class="btn btn-default">Create</button></div></form></td><td></td><td></td><td></td></tr><tr><th>Name</th><th>Permissions</th><th></th><th></th></tr><tr ng-repeat="role in rolesCtrl.roles"><td><form ng-if=role.showEditor ng-submit=rolesCtrl.updateRole(role)><div class=form-group><input ng-model=role.name class=form-control></div><button type=submit class="btn btn-primary btn-xs">Update</button> <button type=button class="btn btn-default btn-xs" ng-click="role.showEditor=false">Cancel</button></form><span ng-if=!role.showEditor ng-click="role.showEditor=true"><i class="fa fa-fw fa-pencil"></i> <span ng-bind=role.name></span></span></td><td><form ng-submit=rolesCtrl.updateRole(role)><div class=checkbox ng-repeat="permission in rolesCtrl.permissions"><label><input type=checkbox ng-checked="role._permissions.indexOf(permission._id) > -1" ng-click="rolesCtrl.toggleSelection(role, permission._id)"><span ng-bind=permission.name></span></label></div><div class=form-group><button type=submit class="btn btn-xs btn-primary">Update Permissions</button></div></form></td><td><label><input ng-disabled="role.name === \'admin\'" type=checkbox ng-checked=role.isDefault ng-click=rolesCtrl.updateDefaultRole($index)> Default</label></td><td><button class="btn btn-xs btn-default" ng-click=rolesCtrl.delete($index)><i class="fa fa-trash"></i>Delete</button></td></tr></table>');
     $templateCache.put('../public/app/views/user-form.html',
-        '<div class=page-header><h1 ng-if=userFormCtrl.formData._id>Edit User</h1><h1 ng-if=!userFormCtrl.formData._id>New User Registration</h1></div><form name=register-form id=form-login class=form-horizontal ng-submit=userFormCtrl.submit() method=post validate><div class="col-md-9 col-sm-10 form-group tab-pane"><div class=form-group ng-class="{\'has-error\': register-form.emailAddress.$touched && register-form.emailAddress.$invalid}"><label class="col-md-3 col-sm-2 control-label">Email Address:</label><div class="col-md-9 col-sm-10"><input class=form-control autocomplete=off type=email name=registerEmailAddress ng-model=userFormCtrl.formData.emailAddress placeholder=(required) required><div ng-show=register-form.$error.email class=help-block>Valid email address is required.</div></div></div><div class=form-group><label class="col-md-3 col-sm-2 control-label">Role:</label><div class="col-md-9 col-sm-10"><select class=form-control name=roleModel ng-model=userFormCtrl.formData._role required><option value="">--- Select ---</option><option ng-repeat="role in userFormCtrl.roles track by $index" value="{{ role._id }}" ng-selected=::userFormCtrl.isSelected(role)>{{ role.name }}</option></select><div ng-show=register-form.roleModel.$error.required class=help-block>Valid user role selection required.</div></div></div></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-primary btn-block" type=button ng-disabled=register-form.$invalid cc-confirm-click="Are you sure you want to edit {{userFormCtrl.formData.emailAddress}}? This user\'s session will be deleted and they will be asked to login again." data-confirmed-click=userFormCtrl.submit()><i class="fa fa-save"></i>Save</button> <button ng-if=!userFormCtrl.formData._id class="btn btn-primary btn-block" type=submit ng-disabled=register-form.$invalid><i class="fa fa-plus"></i>Create</button> <button ng-if="::userFormCtrl.formData._id && appCtrl.isAuthorized(\'DELETE_USER\')" class="btn btn-danger btn-block" type=button cc-confirm-click="Are you sure you want to DELETE {{userFormCtrl.formData.emailAddress}}?" data-confirmed-click=userFormCtrl.deleteUser()><i class="fa fa-trash"></i>Delete</button></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-default btn-block" type=button cc-confirm-click="Are you sure you want to request a password reset for {{userFormCtrl.formData.emailAddress}}?" data-confirmed-click=userFormCtrl.sendResetPasswordRequest()><i class="fa fa-refresh" aria-hidden=true></i>Reset Password</button></div></form>');
+        '<div class=page-header><h1 ng-if=userFormCtrl.formData._id>Edit User</h1><h1 ng-if=!userFormCtrl.formData._id>New User Registration</h1></div><form name=register-form id=form-login class=form-horizontal ng-submit=userFormCtrl.submit() method=post validate><div class="col-md-9 col-sm-10 form-group tab-pane"><div class=form-group ng-class="{\'has-error\': register-form.emailAddress.$touched && register-form.emailAddress.$invalid}"><label class="col-md-3 col-sm-2 control-label">Email Address:</label><div class="col-md-9 col-sm-10"><input class=form-control autocomplete=off type=email name=registerEmailAddress ng-model=userFormCtrl.formData.emailAddress placeholder=(required) required><div ng-show=register-form.$error.email class=help-block>Valid email address is required.</div></div></div><div class=form-group><label class="col-md-3 col-sm-2 control-label">Role:</label><div class="col-md-9 col-sm-10"><select class=form-control name=roleModel ng-model=userFormCtrl.formData._role required><option value="">--- Select ---</option><option ng-repeat="role in userFormCtrl.roles track by $index" value="{{ role._id }}" ng-selected=::userFormCtrl.isSelected(role)>{{ role.name }}</option></select><div ng-show=register-form.roleModel.$error.required class=help-block>Valid user role selection required.</div></div></div></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-primary btn-block" type=button ng-disabled=register-form.$invalid cc-confirm-click="Are you sure you want to edit {{userFormCtrl.formData.emailAddress}}? This user\'s session will be deleted and they will be asked to login again." data-confirmed-click=userFormCtrl.submit()><i class="fa fa-save"></i>Save</button> <button ng-if=!userFormCtrl.formData._id class="btn btn-primary btn-block" type=submit ng-disabled=register-form.$invalid><i class="fa fa-plus"></i>Create</button> <button ng-if="::userFormCtrl.formData._id && mainCtrl.isAuthorized(\'DELETE_USER\')" class="btn btn-danger btn-block" type=button cc-confirm-click="Are you sure you want to DELETE {{userFormCtrl.formData.emailAddress}}?" data-confirmed-click=userFormCtrl.deleteUser()><i class="fa fa-trash"></i>Delete</button></div><div class="col-md-3 col-sm-2 form-group"><button ng-if=userFormCtrl.formData._id class="btn btn-default btn-block" type=button cc-confirm-click="Are you sure you want to request a password reset for {{userFormCtrl.formData.emailAddress}}?" data-confirmed-click=userFormCtrl.sendResetPasswordRequest()><i class="fa fa-refresh" aria-hidden=true></i>Reset Password</button></div></form>');
     $templateCache.put('../public/app/views/users.html',
-        '<div class=page-header><div class=controls><a class="btn btn-default" ng-if="appCtrl.isAuthorized(\'CREATE_USER\')" ui-sref="admin.user-form({ id: null })" href><i class="fa fa-plus"></i>Add new user</a></div><h1 class=bb-page-heading>Users</h1></div><cc-sortable-table model=usersCtrl.users columns=usersCtrl.sortableTable.columns></cc-sortable-table>');
+        '<div class=page-header><div class=controls><a class="btn btn-default" ng-if="mainCtrl.isAuthorized(\'CREATE_USER\')" ui-sref="admin.user-form({ id: null })" href><i class="fa fa-plus"></i>Add new user</a></div><h1 class=bb-page-heading>Service Catalog Users</h1></div><cc-sortable-table model=usersCtrl.users columns=usersCtrl.sortableTable.columns></cc-sortable-table>');
     $templateCache.put('../public/app/components/back-to-top/back-to-top.html',
         '<div class=back-to-top ng-click=backToTop()><i class="fa fa-angle-double-up"></i></div>');
     $templateCache.put('../public/app/components/breadcrumbs/breadcrumbs.html',
@@ -8254,15 +8172,11 @@ angular.module('capabilities-catalog.templates', []).run(['$templateCache', func
     $templateCache.put('../public/app/components/capability-list/capability-list.html',
         '<div class="section section-warning" id=section-services><div class=container><header><h2>Services</h2><p class=controls ng-if="::listCtrl.isAuthorized(\'CREATE_CAPABILITY_GROUP\')"><a class="btn btn-default btn-sm" href ui-sref=capability-group-form><i class="fa fa-plus"></i>Add Service Group</a></p></header><div class=section-body ng-repeat="capabilityGroup in items track by capabilityGroup._id" ng-if="capabilityGroup.value.length || (listCtrl.isAuthorized(\'CREATE_PRODUCT\') && !hideHeadings)"><header><h3 ng-bind=::capabilityGroup.name></h3><p class=controls ng-if="::listCtrl.isAuthorized(\'CREATE_CAPABILITY\')"><a class="btn btn-default btn-sm" href ng-if="::listCtrl.isAuthorized(\'EDIT_CAPABILITY_GROUP\') && capabilityGroup._id" ui-sref="capability-group-form(::{ groupId: capabilityGroup._id })"><i class="fa fa-pencil"></i>Edit Group</a> <a class="btn btn-default btn-sm" href ui-sref="capability-form({ groupId: capabilityGroup._id })"><i class="fa fa-plus"></i>Add Service</a></p></header><ul class="meter-list row" ng-sortable=capabilityGroup.sortConfig><li class="meter-list-item col-lg-4 col-md-6 col-sm-6" ng-class="::{ draggable: listCtrl.isDraggable }" ng-repeat="capability in capabilityGroup.value track by capability._id"><div class=featurette><a class=featurette-body href ui-sref="capability(::{ capabilitySlug: capability.slug })"><div class=media><div class=media-left><i class="media-object fa fa-fw {{::capability.icon}}"></i></div><div class=media-body><h4 class=featurette-title><span ng-bind=::capability.shortname></span> <span ng-if=capability.nicknames.length class="featurette-subtitle element-list">(<span class=element-list-item ng-repeat="nickname in ::capability.nicknames track by $index" ng-bind=::nickname></span>)</span></h4><span class=stats><span class=stat ng-bind=::capability.developmentState></span> <span class=stat ng-bind=::capability.capabilityType></span> <span class=stat ng-bind="::capability.adopters.length + \'&nbsp;adopters\'"></span> <span ng-if=capability.lastUpdated class=stat ng-bind=::capability.lastUpdated.formatted.friendly></span></span><div class=controls ng-if="::listCtrl.isAuthorized(\'EDIT_CAPABILITY:PARTIAL\')"><button class="btn btn-xs btn-link" ng-click="listCtrl.goto(\'capability-form\', { capabilityId: capability._id }, $event)"><i class="fa fa-pencil"></i></button></div></div></div></a><div class=featurette-footer><cc-chart model=capability.adopters totals=capability.totals data-title="::capability.name + \' Adopters\'"></cc-chart></div></div></li></ul></div></div></div>');
     $templateCache.put('../public/app/components/capability-table/capability-table.html',
-        '<div class="section section-warning capabilities-catalog" id=section-services><div class=container><header><h2>Services</h2><p class=controls ng-if="::appCtrl.isAuthorized(\'CREATE_CAPABILITY_GROUP\')"><a class="btn btn-default btn-sm" href ui-sref=capability-group-form><i class="fa fa-plus"></i>Add Service Group</a></p></header><ul class="table-list capability-list"><li class=table-list-item ng-repeat="capabilityGroup in ::listCtrl.capabilities track by capabilityGroup._id" ng-if="::capabilityGroup.capabilities.length || appCtrl.isAuthorized(\'CREATE_PRODUCT\')"><div class=table-list-heading><h3 ng-bind=::capabilityGroup.name></h3><p class=controls ng-if="::appCtrl.isAuthorized(\'CREATE_CAPABILITY\')"><a class="btn btn-default btn-sm" href ng-if="::appCtrl.isAuthorized(\'EDIT_CAPABILITY_GROUP\') && capabilityGroup._id" ui-sref="capability-group-form(::{ groupId: capabilityGroup._id })"><i class="fa fa-pencil"></i>Edit Group</a> <a class="btn btn-default btn-sm" href ui-sref="capability-form({ groupId: capabilityGroup._id })"><i class="fa fa-plus"></i>Add Service</a></p></div><div class=table-responsive><table class="table table-striped"><thead><tr><th class=name>Capability Name</th><th>Type</th><th>State</th><th class=stats>Products Adopting Capability</th><th ng-if="::appCtrl.isAuthorized(\'EDIT_CAPABILITY:PARTIAL\')"></th></tr></thead><tbody ng-sortable=capabilityGroup.sortConfig><tr ng-class="::{ draggable: appCtrl.isAuthorized(\'EDIT_CAPABILITY:FULL\') && capabilityGroup._id }" ng-repeat="capability in capabilityGroup.capabilities track by $index"><td class=name><a class=media href ui-sref="capability(::{ capabilitySlug: capability.slug })"><div class=media-left><i class="fa fa-fw {{::capability.icon}}"></i></div><div class=media-body><h4 ng-bind=::capability.shortname></h4><span class=element-list ng-if=::capability.nicknames.length>(<span class=element-list-item ng-repeat="nickname in ::capability.nicknames track by $index" ng-bind=::nickname></span>)&nbsp;</span></div></a></td><td ng-bind=::capability.capabilityType></td><td ng-bind=::capability.developmentState></td><td class=stats><cc-chart model=capability.adopters totals=capability.totals data-title="::capability.name + \' Adopters\'"></cc-chart></td><td class=controls ng-if="::appCtrl.isAuthorized(\'EDIT_CAPABILITY:PARTIAL\')"><bb-context-menu><li><a href ui-sref="capability-form(::{ capabilityId: capability._id })"><i class="fa fa-pencil"></i> Edit</a></li></bb-context-menu></td></tr></tbody></table></div></li></ul></div></div>');
+        '<div class="section section-warning capabilities-catalog" id=section-services><div class=container><header><h2>Services</h2><p class=controls ng-if="::mainCtrl.isAuthorized(\'CREATE_CAPABILITY_GROUP\')"><a class="btn btn-default btn-sm" href ui-sref=capability-group-form><i class="fa fa-plus"></i>Add Service Group</a></p></header><ul class="table-list capability-list"><li class=table-list-item ng-repeat="capabilityGroup in ::listCtrl.capabilities track by capabilityGroup._id" ng-if="::capabilityGroup.capabilities.length || mainCtrl.isAuthorized(\'CREATE_PRODUCT\')"><div class=table-list-heading><h3 ng-bind=::capabilityGroup.name></h3><p class=controls ng-if="::mainCtrl.isAuthorized(\'CREATE_CAPABILITY\')"><a class="btn btn-default btn-sm" href ng-if="::mainCtrl.isAuthorized(\'EDIT_CAPABILITY_GROUP\') && capabilityGroup._id" ui-sref="capability-group-form(::{ groupId: capabilityGroup._id })"><i class="fa fa-pencil"></i>Edit Group</a> <a class="btn btn-default btn-sm" href ui-sref="capability-form({ groupId: capabilityGroup._id })"><i class="fa fa-plus"></i>Add Service</a></p></div><div class=table-responsive><table class="table table-striped"><thead><tr><th class=name>Capability Name</th><th>Type</th><th>State</th><th class=stats>Products Adopting Capability</th><th ng-if="::mainCtrl.isAuthorized(\'EDIT_CAPABILITY:PARTIAL\')"></th></tr></thead><tbody ng-sortable=capabilityGroup.sortConfig><tr ng-class="::{ draggable: mainCtrl.isAuthorized(\'EDIT_CAPABILITY:FULL\') && capabilityGroup._id }" ng-repeat="capability in capabilityGroup.capabilities track by $index"><td class=name><a class=media href ui-sref="capability(::{ capabilitySlug: capability.slug })"><div class=media-left><i class="fa fa-fw {{::capability.icon}}"></i></div><div class=media-body><h4 ng-bind=::capability.shortname></h4><span class=element-list ng-if=::capability.nicknames.length>(<span class=element-list-item ng-repeat="nickname in ::capability.nicknames track by $index" ng-bind=::nickname></span>)&nbsp;</span></div></a></td><td ng-bind=::capability.capabilityType></td><td ng-bind=::capability.developmentState></td><td class=stats><cc-chart model=capability.adopters totals=capability.totals data-title="::capability.name + \' Adopters\'"></cc-chart></td><td class=controls ng-if="::mainCtrl.isAuthorized(\'EDIT_CAPABILITY:PARTIAL\')"><bb-context-menu><li><a href ui-sref="capability-form(::{ capabilityId: capability._id })"><i class="fa fa-pencil"></i> Edit</a></li></bb-context-menu></td></tr></tbody></table></div></li></ul></div></div>');
     $templateCache.put('../public/app/components/chart/chart.html',
         '<div class=chart ng-if=::chartCtrl.model.length ng-click=chartCtrl.openModal()><div class=meter style="width:{{:: chartCtrl.model.length * 30 }}px"><div ng-repeat="total in ::chartCtrl.totals track by $index" class="bar {{:: total.class }}" style="width:{{:: total.percentage }}%" tooltip-placement=top tooltip-popup-delay=200 uib-tooltip="{{:: total.model.adoptionStatus.name }} · {{::total.count}} adopting"></div></div></div>');
-    $templateCache.put('../public/app/components/forms/login/login-form.html',
-        '<div bb-scroll-into-view=formCtrl.scrollToTop><div ng-if=formCtrl.success class="alert alert-success" ng-bind-html=formCtrl.trustHtml(formCtrl.success)></div><div ng-if=formCtrl.error class="alert alert-danger" ng-bind-html=formCtrl.trustHtml(formCtrl.error)></div><p><button ng-click=formCtrl.loginWithBlackbaud() class="btn btn-lg btn-primary">Login using Blackbaud.com</button></p><form name=loginForm id=form-login class=form-horizontal ng-submit=formCtrl.submit() method=post novalidate><div class=form-group ng-class="{\'has-error\': loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid}"><label class="col-sm-2 control-label">Email Address:</label><div class=col-sm-10><input class=form-control id=email-address name=emailAddress ng-model=formCtrl.formData.emailAddress placeholder=(required) required><div ng-show="loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid" class=help-block>Email Address is required.</div></div></div><div class=form-group ng-class="{\'has-error\': loginForm.password.$touched && loginForm.password.$invalid}"><label class="col-sm-2 control-label">Password:</label><div class=col-sm-10><input class=form-control type=password name=password ng-model=formCtrl.formData.password placeholder=(required) required><div ng-show="loginForm.password.$touched && loginForm.password.$invalid" class=help-block>Password is required.</div></div></div><div class=form-group><label class="col-sm-2 control-label"></label><div class=col-sm-10><a href ui-sref=reset-password>Forgot your password?</a></div></div><div class="form-group form-buttons"><div class="col-sm-offset-2 col-sm-10"><button class="btn btn-primary btn-lg" id=login-form-button type=submit ng-disabled=loginForm.$invalid><i class="fa fa-login"></i>Log In</button></div></div></form></div>');
     $templateCache.put('../public/app/components/modals/chart-modal.html',
         '<bb-modal><div class=modal-wrapper><bb-modal-header>{{:: modalCtrl.title }}</bb-modal-header><div class="modal-body modal-table"><div class=table-responsive><table class="table table-striped"><tr ng-repeat="item in ::modalCtrl.model track by $index"><td><h4 ng-bind=::item.name></h4><div><span ng-bind-html=::item.defaultComment></span>&nbsp; <span ng-bind-html=::item.comment></span></div></td><td style="white-space: nowrap"><span class="bullet {{:: item.class }}"></span><span ng-bind=::item.adoptionStatus.name></span></td></tr></table></div></div><bb-modal-footer><button ng-click=$close() class="btn btn-default">Close</button></bb-modal-footer></div></bb-modal>');
-    $templateCache.put('../public/app/components/modals/login-modal.html',
-        '<bb-modal><div class=modal-form><bb-modal-header>Editor Log In</bb-modal-header><div bb-modal-body><cc-login-form on-success=contentCtrl.onSuccess></cc-login-form></div><bb-modal-footer><bb-modal-footer-button-primary ng-click=contentCtrl.login()>Log In</bb-modal-footer-button-primary><bb-modal-footer-button-cancel></bb-modal-footer-button-cancel></bb-modal-footer></div></bb-modal>');
     $templateCache.put('../public/app/components/popovers/adoption-status-chart.html',
         '<div class=popover-content><ul class=badge-list><li ng-repeat="product in ::capability.products"><a href class="{{:: product.class }}" bb-popover-template=../public/app/components/popovers/product-comment.html data-popover-title="{{:: product.adoptionStatus.name }}"><span class=badge-list-name ng-bind=::product.name></span> <span class=badge-list-description ng-bind=::product.adoptionStatus.name></span></a></li></ul></div>');
     $templateCache.put('../public/app/components/popovers/default.html',
@@ -8272,7 +8186,7 @@ angular.module('capabilities-catalog.templates', []).run(['$templateCache', func
     $templateCache.put('../public/app/components/product-list/product-list.html',
         '<div class="section section-info capabilities-catalog" id=section-products><div class=container><header><h2>Products</h2><p class=controls ng-if="::listCtrl.isAuthorized(\'CREATE_PRODUCT_GROUP\')"><a class="btn btn-default" href ui-sref=product-group-form><i class="fa fa-plus"></i>Add Product Group</a></p></header><div class=section-body ng-repeat="productGroup in items track by productGroup._id" ng-if="productGroup.value.length || (listCtrl.isAuthorized(\'CREATE_PRODUCT\') && !hideHeadings)"><header><h3 ng-bind=::productGroup.name></h3><p class=controls ng-if="::listCtrl.isAuthorized(\'CREATE_PRODUCT\')"><a class="btn btn-default btn-sm" href ui-sref="product-group-form(::{ groupId: productGroup._id })" ng-if="::listCtrl.isAuthorized(\'EDIT_PRODUCT_GROUP\') && productGroup._id"><i class="fa fa-pencil"></i>Edit Group</a> <a class="btn btn-default btn-sm" href ui-sref="product-form(::{ groupId: productGroup._id })"><i class="fa fa-plus"></i>Add Product</a></p></header><ul class="meter-list row" ng-sortable=productGroup.sortConfig><li class="meter-list-item col-sm-4" ng-class="::{ draggable: listCtrl.isAuthorized(\'EDIT_PRODUCT:FULL\') }" ng-repeat="product in productGroup.value track by product._id"><div class=featurette><a class=featurette-body href ui-sref="product(::{ productSlug: product.slug })"><h4 class=featurette-title><span ng-bind=::product.name></span></h4><span class=stats><span class=stat ng-bind="::product.adoptees.length + \'&nbsp;services&nbsp;adopted\'"></span> <span ng-if=product.lastUpdated class=stat ng-bind=::product.lastUpdated.formatted.friendly></span></span><div class=controls ng-if="::listCtrl.isAuthorized(\'EDIT_PRODUCT:PARTIAL\')"><button class="btn btn-xs btn-link" ng-click="listCtrl.goto(\'product-form\', { productId: product._id }, $event)"><i class="fa fa-pencil"></i></button></div></a><div class=featurette-footer><cc-chart model=product.adoptees totals=product.totals data-title="::\'Services Adopted by \' + product.name"></cc-chart></div></div></li></ul></div></div></div>');
     $templateCache.put('../public/app/components/product-table/product-table.html',
-        '<div class="section section-info capabilities-catalog" id=section-products><div class=container><header><h2>Products</h2><p class=controls ng-if="::appCtrl.isAuthorized(\'CREATE_PRODUCT_GROUP\')"><a class="btn btn-default" href ui-sref=product-group-form><i class="fa fa-plus"></i>Add Product Group</a></p></header><ul class="table-list capability-list"><li class=table-list-item ng-repeat="productGroup in ::listCtrl.products track by productGroup._id" ng-if="::productGroup.products.length || appCtrl.isAuthorized(\'CREATE_PRODUCT\')"><div class=table-list-heading><h3 ng-bind=::productGroup.name></h3><p class=controls ng-if="::appCtrl.isAuthorized(\'CREATE_PRODUCT\')"><a class="btn btn-default btn-sm" href ui-sref="product-group-form(::{ groupId: productGroup._id })" ng-if="::appCtrl.isAuthorized(\'EDIT_PRODUCT_GROUP\') && productGroup._id"><i class="fa fa-pencil"></i>Edit Group</a> <a class="btn btn-default btn-sm" href ui-sref="product-form({ groupId: productGroup._id })"><i class="fa fa-plus"></i>Add Product</a></p></div><div class=table-responsive><table class="table table-striped"><thead><tr><th class=name>Product</th><th class=stats>Capabilities Adopted and Status</th><th ng-if="::appCtrl.isAuthorized(\'EDIT_PRODUCT:PARTIAL\')"></th></tr></thead><tbody ng-sortable=productGroup.sortConfig><tr ng-class="::{ draggable: appCtrl.isAuthorized(\'EDIT_PRODUCT:FULL\') }" ng-repeat="product in productGroup.products track by product._id"><td class=name><h4 ng-bind=::product.name></h4></td><td class=stats><cc-chart model=product.capabilities totals=product.totals data-title="::\'Services Adopted by \' + product.name"></cc-chart></td><td class=controls ng-if="::appCtrl.isAuthorized(\'EDIT_PRODUCT:PARTIAL\')"><bb-context-menu><li><a href ui-sref="product-form(::{ productId: product._id })"><i class="fa fa-pencil"></i> Edit</a></li></bb-context-menu></td></tr></tbody></table></div></li></ul></div></div>');
+        '<div class="section section-info capabilities-catalog" id=section-products><div class=container><header><h2>Products</h2><p class=controls ng-if="::mainCtrl.isAuthorized(\'CREATE_PRODUCT_GROUP\')"><a class="btn btn-default" href ui-sref=product-group-form><i class="fa fa-plus"></i>Add Product Group</a></p></header><ul class="table-list capability-list"><li class=table-list-item ng-repeat="productGroup in ::listCtrl.products track by productGroup._id" ng-if="::productGroup.products.length || mainCtrl.isAuthorized(\'CREATE_PRODUCT\')"><div class=table-list-heading><h3 ng-bind=::productGroup.name></h3><p class=controls ng-if="::mainCtrl.isAuthorized(\'CREATE_PRODUCT\')"><a class="btn btn-default btn-sm" href ui-sref="product-group-form(::{ groupId: productGroup._id })" ng-if="::mainCtrl.isAuthorized(\'EDIT_PRODUCT_GROUP\') && productGroup._id"><i class="fa fa-pencil"></i>Edit Group</a> <a class="btn btn-default btn-sm" href ui-sref="product-form({ groupId: productGroup._id })"><i class="fa fa-plus"></i>Add Product</a></p></div><div class=table-responsive><table class="table table-striped"><thead><tr><th class=name>Product</th><th class=stats>Capabilities Adopted and Status</th><th ng-if="::mainCtrl.isAuthorized(\'EDIT_PRODUCT:PARTIAL\')"></th></tr></thead><tbody ng-sortable=productGroup.sortConfig><tr ng-class="::{ draggable: mainCtrl.isAuthorized(\'EDIT_PRODUCT:FULL\') }" ng-repeat="product in productGroup.products track by product._id"><td class=name><h4 ng-bind=::product.name></h4></td><td class=stats><cc-chart model=product.capabilities totals=product.totals data-title="::\'Services Adopted by \' + product.name"></cc-chart></td><td class=controls ng-if="::mainCtrl.isAuthorized(\'EDIT_PRODUCT:PARTIAL\')"><bb-context-menu><li><a href ui-sref="product-form(::{ productId: product._id })"><i class="fa fa-pencil"></i> Edit</a></li></bb-context-menu></td></tr></tbody></table></div></li></ul></div></div>');
     $templateCache.put('../public/app/components/sortable-table/sortable-table.html',
         '<div class=table-responsive><table class="table table-striped table-sortable"><tr><th ng-repeat="column in sortableCtrl.columns track by $index" ng-class="{\'active\':sortableCtrl.isActiveColumn(column)}"><span ng-if=!sortableCtrl.isOrderable(column) ng-bind=column.name></span> <a ng-if=sortableCtrl.isOrderable(column) href ng-click=sortableCtrl.setOrderBy(column.model)><span ng-bind=column.name></span> <span class=carets ng-if=sortableCtrl.isActiveColumn(column)><i class="fa fa-fw fa-sort-alpha-asc table-sortable-caret" ng-if=!sortableCtrl.ascending aria-hidden=true></i> <i class="fa fa-fw fa-sort-alpha-desc table-sortable-caret" ng-if=sortableCtrl.ascending aria-hidden=true></i></span></a></th></tr><tbody><tr ng-repeat="item in sortableCtrl.model | orderBy:sortableCtrl.orderBy:sortableCtrl.ascending track by $index"><td ng-repeat="column in sortableCtrl.columns track by $index"><span ng-if=column.model ng-bind="sortableCtrl.parseModelFromString(item, column.model)"></span><div ng-if=column.html ng-bind-html=column.html>{{column.html}}</div><div ng-if=column.button><button ng-click=column.button.action(item) class="btn btn-xs btn-default {{column.button.classnames}}" ng-bind-html=column.button.label></button></div></td></tr></tbody></table></div>');
     $templateCache.put('../public/app/components/toasts/toast.html',

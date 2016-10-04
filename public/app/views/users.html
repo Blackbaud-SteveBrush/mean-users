@@ -1,9 +1,9 @@
 <div class="page-header">
   <div class="controls">
-    <a class="btn btn-default" ng-if="appCtrl.isAuthorized('CREATE_USER')" ui-sref="admin.user-form({ id: null })" href><i class="fa fa-plus"></i>Add new user</a>
+    <a class="btn btn-default" ng-if="mainCtrl.isAuthorized('CREATE_USER')" ui-sref="admin.user-form({ id: null })" href><i class="fa fa-plus"></i>Add new user</a>
   </div>
   <h1 class="bb-page-heading">
-    Users
+    Service Catalog Users
   </h1>
 </div>
 <cc-sortable-table model="usersCtrl.users" columns="usersCtrl.sortableTable.columns"></cc-sortable-table>

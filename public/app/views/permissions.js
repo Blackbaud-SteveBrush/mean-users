@@ -9,7 +9,7 @@
 
         PermissionService.getAll().then(function (data) {
             vm.permissions = data.value;
-        });
+        }).catch(MessageService.handleError);
 
         vm.submit = function () {
             PermissionService.create(vm.formData).then(function (data) {

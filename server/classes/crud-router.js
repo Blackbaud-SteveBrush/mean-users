@@ -1,5 +1,7 @@
 var utils;
+
 utils = require('../libs/utils');
+
 function CrudRouter(options) {
     var checkPermissionMiddleware,
         defaults,
@@ -67,7 +69,7 @@ function CrudRouter(options) {
         }]
     };
 
-    // Include permissions to the middleware arrays.
+    // Add permission checks to the middleware arrays.
     checkPermissionMiddleware = function (req, res, next) {
         next(req.isAuthorized(self.settings.authorization[k].permission));
     };

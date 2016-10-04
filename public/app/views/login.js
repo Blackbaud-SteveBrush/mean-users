@@ -1,29 +1,40 @@
 (function (angular) {
     'use strict';
 
-    function LoginPageController($state) {
+    function LoginController($state, AuthService, MessageService) {
         var vm;
+
         vm = this;
-        vm.redirect = function () {
-            var params,
-                state;
+        vm.formData = {};
 
-            state = $state.previous.name;
-            params = $state.previous.params;
+        function onSuccess() {
+            $state.go('home');
+        }
 
-            if (!state || state === 'login') {
-                state = 'home';
-                params = {};
-            }
-            $state.go(state, params, { reload: true });
+        vm.submit = function () {
+            AuthService
+                .login(vm.formData.emailAddress, vm.formData.password)
+                .then(onSuccess)
+                .catch(MessageService.handleError);
+        };
+
+        vm.loginWithBlackbaud = function () {
+            AuthService
+                .loginWithToken()
+                .then(onSuccess)
+                .catch(function () {
+                    AuthService.redirect();
+                });
         };
     }
 
-    LoginPageController.$inject = [
-        '$state'
+    LoginController.$inject = [
+        '$state',
+        'AuthService',
+        'MessageService'
     ];
 
     angular.module('capabilities-catalog')
-        .controller('LoginPageController', LoginPageController);
+        .controller('LoginController', LoginController);
 
 }(window.angular));

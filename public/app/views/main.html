@@ -1,19 +1,19 @@
 <div ng-if="oAuthCtrl.isReady">
-    <div ng-if="appCtrl.isReady">
+    <div ng-if="mainCtrl.isReady">
       <header id="header">
         <bb-navbar class="navbar navbar-inverse bb-navbar">
           <div class="container">
-            <ul ng-if="!appCtrl.isLoggedIn()" class="nav navbar-nav navbar-right">
+            <ul ng-if="!mainCtrl.isLoggedIn()" class="nav navbar-nav navbar-right">
               <li ui-sref-active="bb-navbar-active">
-                <a href ui-sref="login">Log in</a>
+                <a href ui-sref="login"><i class="fa fa-fw fa-sign-in"></i>Editor Login</a>
               </li>
               <li ui-sref-active="bb-navbar-active">
-                <a href ui-sref="register">Register</a>
+                <a href ui-sref="register"><i class="fa fa-fw fa-user-plus"></i>Register</a>
               </li>
             </ul>
-            <ul ng-if="appCtrl.isLoggedIn()" class="nav navbar-nav navbar-right">
+            <ul ng-if="mainCtrl.isLoggedIn()" class="nav navbar-nav navbar-right">
               <li ui-sref-active="bb-navbar-active">
-                <a href ui-sref="profile" ng-bind="appCtrl.user.emailAddress"></a>
+                <a href ui-sref="profile" ng-bind="mainCtrl.user.emailAddress"></a>
               </li>
               <li ui-sref-active="bb-navbar-active">
                 <a href ui-sref="admin.users">Users</a>
@@ -26,6 +26,11 @@
               </li>
               <li ui-sref-active="bb-navbar-active">
                 <a href ui-sref="logout">Log out</a>
+              </li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+              <li ui-sref-active="bb-navbar-active">
+                <a href ui-sref="help"><i class="fa fa-fw fa-question-circle"></i>Help</a>
               </li>
             </ul>
             <ul class="nav navbar-nav navbar-left">

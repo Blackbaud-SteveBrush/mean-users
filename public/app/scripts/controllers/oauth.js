@@ -22,7 +22,6 @@
             vm.isReady = false;
 
             // Don't validate the token on the OAuth redirect.
-            console.log("Checking current state...", $state.$current.name);
             if ($state.$current.name === 'validate') {
                 return;
             }
@@ -34,7 +33,6 @@
                     .then(AuthService.redirect);
             } else {
                 console.log("Already logged in to blackbaud.com.");
-                //console.log("Logged in!", user, AuthService.getAccessToken());
                 AuthService
                     .validateToken()
                     .then(function () {

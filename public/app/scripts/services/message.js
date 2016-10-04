@@ -1,7 +1,7 @@
 (function (angular) {
     'use strict';
 
-    function MessageService($timeout, bbModal, bbToast) {
+    function MessageService($timeout, AuthService, bbModal, bbToast) {
         var service;
 
         service = this;
@@ -15,7 +15,8 @@
             defaults = {
                 templateUrl: "../public/app/components/toasts/toast.html",
                 controller: "ToastMessageController as toastCtrl",
-                requestLogin: false
+                requestLogin: false,
+                icon: 'fa-question-circle-o'
             };
 
             if (typeof options !== 'object') {
@@ -106,7 +107,7 @@
             }
             if (typeof error === 'string') {
                 service.error(error);
-            } else if (error.status === 401) {
+            } else if (error.status === 401 && !AuthService.isLoggedIn()) {
                 service.info({
                     message: error.data.message,
                     requestLogin: true
@@ -133,6 +134,7 @@
 
     MessageService.$inject = [
         '$timeout',
+        'AuthService',
         'bbModal',
         'bbToast'
     ];

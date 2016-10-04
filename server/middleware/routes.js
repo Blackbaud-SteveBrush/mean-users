@@ -37,8 +37,7 @@ permissionsRouter = new CrudRouter({
     service: PermissionService,
     authorization: {
         get: {
-            permission: 'GET_PERMISSION',
-            message: "You don't have permission to view that permission."
+            permission: 'GET_PERMISSION'
         }
     }
 });

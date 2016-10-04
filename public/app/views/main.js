@@ -1,14 +1,14 @@
 (function (angular) {
     'use strict';
 
-    function AppController($scope, $state, $timeout, AuthService) {
+    function MainController($scope, $timeout, AuthService) {
         var vm;
 
         vm = this;
         vm.isLoggedIn = AuthService.isLoggedIn;
         vm.isAuthorized = AuthService.isAuthorized;
 
-        $scope.$on('ccAuthorizationSuccess', function () {
+        $scope.$on('$stateChangeSuccess', function () {
             vm.isReady = true;
             $timeout(function () {
                 vm.user = AuthService.getUser();
@@ -16,14 +16,13 @@
         });
     }
 
-    AppController.$inject = [
+    MainController.$inject = [
         '$scope',
-        '$state',
         '$timeout',
         'AuthService'
     ];
 
     angular.module('capabilities-catalog')
-        .controller('AppController', AppController);
+        .controller('MainController', MainController);
 
 }(window.angular));

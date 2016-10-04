@@ -2,17 +2,17 @@
   <div class="container">
     <header>
       <h2>Services</h2>
-      <p class="controls" ng-if="::appCtrl.isAuthorized('CREATE_CAPABILITY_GROUP')">
+      <p class="controls" ng-if="::mainCtrl.isAuthorized('CREATE_CAPABILITY_GROUP')">
         <a class="btn btn-default btn-sm" href ui-sref="capability-group-form"><i class="fa fa-plus"></i>Add Service Group</a></span>
       </p>
     </header>
 
     <ul class="table-list capability-list">
-      <li class="table-list-item" ng-repeat="capabilityGroup in ::listCtrl.capabilities track by capabilityGroup._id" ng-if="::capabilityGroup.capabilities.length || appCtrl.isAuthorized('CREATE_PRODUCT')">
+      <li class="table-list-item" ng-repeat="capabilityGroup in ::listCtrl.capabilities track by capabilityGroup._id" ng-if="::capabilityGroup.capabilities.length || mainCtrl.isAuthorized('CREATE_PRODUCT')">
         <div class="table-list-heading">
           <h3 ng-bind="::capabilityGroup.name"></h3>
-          <p class="controls" ng-if="::appCtrl.isAuthorized('CREATE_CAPABILITY')">
-            <a class="btn btn-default btn-sm" href ng-if="::appCtrl.isAuthorized('EDIT_CAPABILITY_GROUP') && capabilityGroup._id" ui-sref="capability-group-form(::{ groupId: capabilityGroup._id })"><i class="fa fa-pencil"></i>Edit Group</a>
+          <p class="controls" ng-if="::mainCtrl.isAuthorized('CREATE_CAPABILITY')">
+            <a class="btn btn-default btn-sm" href ng-if="::mainCtrl.isAuthorized('EDIT_CAPABILITY_GROUP') && capabilityGroup._id" ui-sref="capability-group-form(::{ groupId: capabilityGroup._id })"><i class="fa fa-pencil"></i>Edit Group</a>
             <a class="btn btn-default btn-sm" href ui-sref="capability-form({ groupId: capabilityGroup._id })">
               <i class="fa fa-plus"></i>Add Service
             </a>
@@ -34,12 +34,12 @@
                 <th class="stats">
                   Products Adopting Capability
                 </th>
-                <th ng-if="::appCtrl.isAuthorized('EDIT_CAPABILITY:PARTIAL')">
+                <th ng-if="::mainCtrl.isAuthorized('EDIT_CAPABILITY:PARTIAL')">
                 </th>
               </tr>
             </thead>
             <tbody ng-sortable="capabilityGroup.sortConfig">
-              <tr ng-class="::{ draggable: appCtrl.isAuthorized('EDIT_CAPABILITY:FULL') && capabilityGroup._id }" ng-repeat="capability in capabilityGroup.capabilities track by $index">
+              <tr ng-class="::{ draggable: mainCtrl.isAuthorized('EDIT_CAPABILITY:FULL') && capabilityGroup._id }" ng-repeat="capability in capabilityGroup.capabilities track by $index">
                 <td class="name">
                   <a class="media" href ui-sref="capability(::{ capabilitySlug: capability.slug })">
                     <div class="media-left">
@@ -56,7 +56,7 @@
                 <td class="stats">
                   <cc-chart model="capability.adopters" totals="capability.totals" data-title="::capability.name + ' Adopters'"></cc-chart>
                 </td>
-                <td class="controls" ng-if="::appCtrl.isAuthorized('EDIT_CAPABILITY:PARTIAL')">
+                <td class="controls" ng-if="::mainCtrl.isAuthorized('EDIT_CAPABILITY:PARTIAL')">
                   <bb-context-menu>
                     <li>
                       <a href ui-sref="capability-form(::{ capabilityId: capability._id })"><i class="fa fa-pencil"></i> Edit</a>

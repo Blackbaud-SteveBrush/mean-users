@@ -13,10 +13,6 @@
 
         // Views that do not require OAuth.
         $stateProvider
-            .state('logout', {
-                url: '/logout',
-                controller: 'LogoutController'
-            })
             .state('validate', {
                 url: '/oauth/?validate=&id_token&state',
                 template: '',
@@ -27,7 +23,7 @@
         $stateProvider
             .state('oauth', {
                 url: '/',
-                templateUrl: '../public/app/views/app.html',
+                templateUrl: '../public/app/views/main.html',
                 controller: 'OAuthController as oAuthCtrl'
             })
             .state('home', {
@@ -40,7 +36,12 @@
                 url: 'login',
                 parent: 'oauth',
                 templateUrl: '../public/app/views/login.html',
-                controller: 'LoginPageController as loginPageCtrl'
+                controller: 'LoginController as loginCtrl'
+            })
+            .state('logout', {
+                url: '/logout',
+                parent: 'oauth',
+                controller: 'LogoutController'
             })
             .state('register', {
                 url: 'register',
@@ -127,23 +128,15 @@
 
                         if (!data.isLoggedIn || AuthService.isAuthorized(toState.data.restrictions.permission) === false || AuthService.isRole(toState.data.restrictions.role) === false) {
                             MessageService.error("You are not authorized to view that page.");
-                            $state.go('login', {}, { reload: true });
+                            $state.go('login');
                             return;
                         }
                     }
 
                     bypass = true;
                     $state.go(toState, toParams);
-                }).catch(MessageService.handleError);
-        });
-
-        // Store the previous state, for login redirects.
-        $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
-            $state.previous = {
-                name: fromState.name,
-                params: fromParams
-            };
-            $rootScope.$broadcast('ccAuthorizationSuccess');
+                })
+                .catch(MessageService.handleError);
         });
 
         bbOmnibarConfig.userLoaded = function (data) {
