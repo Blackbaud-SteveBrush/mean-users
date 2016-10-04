@@ -2,9 +2,9 @@
   <div ng-if="formCtrl.success" class="alert alert-success" ng-bind-html="formCtrl.trustHtml(formCtrl.success)"></div>
   <div ng-if="formCtrl.error" class="alert alert-danger" ng-bind-html="formCtrl.trustHtml(formCtrl.error)"></div>
 
-  <div ng-if="formCtrl.isBlackbaudAuthenticated">
-    <button class="btn btn-primary">Login using Blackbaud.com</button>
-  </div>
+  <p>
+    <button ng-click="formCtrl.loginWithBlackbaud()" class="btn btn-lg btn-primary">Login using Blackbaud.com</button>
+  </p>
 
   <form name="loginForm" id="form-login" class="form-horizontal" ng-submit="formCtrl.submit()" method="post" novalidate>
     <div class="form-group" ng-class="{'has-error': loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid}">

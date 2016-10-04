@@ -1,9 +1,12 @@
 var async,
+    CrudRouter,
     express,
     passport,
     router,
     PermissionService,
+    permissionsRouter,
     RoleService,
+    rolesRouter,
     User,
     UserService,
     utils;
@@ -12,6 +15,7 @@ async = require('async');
 express = require('express');
 passport = require('passport');
 User = require('../database/models/user');
+CrudRouter = require('../classes/crud-router');
 PermissionService = require('../database/services/permission');
 RoleService = require('../database/services/role');
 UserService = require('../database/services/user');
@@ -27,63 +31,27 @@ router.get('/', function (req, res) {
     });
 });
 
-router.route('/api/permissions')
-    .get(function (req, res, next) {
-        PermissionService.getAll().then(function (data) {
-            utils.parseSuccess(res, data);
-        }).catch(next);
-    })
-    .post(function (req, res, next) {
-        PermissionService.create(req.body).then(function (data) {
-            utils.parseSuccess(res, data);
-        }).catch(next);
-    });
+// PERMISSIONS
+permissionsRouter = new CrudRouter({
+    resourceName: 'permissions',
+    service: PermissionService,
+    authorization: {
+        get: {
+            permission: 'GET_PERMISSION',
+            message: "You don't have permission to view that permission."
+        }
+    }
+});
+permissionsRouter.attach(router);
 
-router.route('/api/permissions/:id')
-    .delete(function (req, res, next) {
-        PermissionService.deleteById(req.params.id).then(function (data) {
-            utils.parseSuccess(res, data);
-        }).catch(next);
-    })
-    .get(function (req, res, next) {
-        PermissionService.getById(req.params.id).then(function (data) {
-            utils.parseSuccess(res, data);
-        }).catch(next);
-    })
-    .put(function (req, res, next) {
-        PermissionService.updateById(req.params.id, req.body).then(function (data) {
-            utils.parseSuccess(res, data);
-        }).catch(next);
-    });
+// ROLES
+rolesRouter = new CrudRouter({
+    resourceName: 'roles',
+    service: RoleService
+});
+rolesRouter.attach(router);
 
-router.route('/api/roles')
-    .get(function (req, res, next) {
-        RoleService.getAll().then(function (data) {
-            utils.parseSuccess(res, data);
-        }).catch(next);
-    })
-    .post(function (req, res, next) {
-        RoleService.create(req.body).then(function (data) {
-            utils.parseSuccess(res, data);
-        }).catch(next);
-    });
 
-router.route('/api/roles/:id')
-    .delete(function (req, res, next) {
-        RoleService.deleteById(req.params.id).then(function (data) {
-            utils.parseSuccess(res, data);
-        }).catch(next);
-    })
-    .get(function (req, res, next) {
-        RoleService.getById(req.params.id).then(function (data) {
-            utils.parseSuccess(res, data);
-        }).catch(next);
-    })
-    .put(function (req, res, next) {
-        RoleService.updateById(req.params.id, req.body).then(function (data) {
-            utils.parseSuccess(res, data);
-        }).catch(next);
-    });
 
 router.route('/api/users')
     .get(

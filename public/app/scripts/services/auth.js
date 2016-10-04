@@ -1,7 +1,7 @@
 (function (angular) {
     'use strict';
 
-    function AuthService($http, $q, $window, SessionService) {
+    function AuthService($http, $q, $window, $interval, SessionService) {
         var isLoggedIn,
             service,
             user;
@@ -89,11 +89,17 @@
             return deferred.promise;
         };
 
+        service.loginWithToken = function () {
+            if (!SessionService.get('token')) {
+                return $q.reject("Token invalid.");
+            }
+            return $http.post('/api/login-with-token', SessionService.get('token'));
+        };
+
         service.logout = function () {
             var deferred;
 
             deferred = $q.defer();
-            SessionService.clearAll();
 
             $http
                 .get('/api/logout')
@@ -110,15 +116,15 @@
         };
 
         service.redirect = function () {
-            var redirect = 'https://signin.blackbaud.com/' +
+            var redirect;
+            redirect = 'https://signin.blackbaud.com/' +
                 'oauth2/authorize?response_type=id_token' +
                 '&scope=openid profile email' +
                 '&client_id=' + encodeURIComponent('renxt.blackbaud.com') +
                 '&state=' + encodeURIComponent('abc123') +
                 '&nonce=' + encodeURIComponent('abc123') +
-                '&redirect_uri=' + encodeURIComponent('http://localhost:3000/');
-            console.log("REDIRECT", redirect);
-            // $window.location.href = redirect;
+                '&redirect_uri=' + encodeURIComponent('http://localhost:3000/#/oauth/?validate=');
+            $window.location.href = redirect;
         };
 
         service.register = function (data) {
@@ -130,7 +136,6 @@
         };
 
         service.validateToken = function () {
-            console.log("Validating access token...");
             return $http.post('/api/oauth/validate', SessionService.get('token'));
         };
     }
@@ -139,6 +144,7 @@
         '$http',
         '$q',
         '$window',
+        '$interval',
         'SessionService'
     ];
 

@@ -10,47 +10,7 @@ passport = require('passport');
 
 module.exports = function (router) {
 
-    // Add role and permissions to the request.
-    router.use(function (req, res, next) {
-        req.role = null;
-        req.permissions = [];
-
-        if (!req.isAuthenticated()) {
-            return next();
-        }
-
-        RoleService.getById(req.user._role).then(function (role) {
-            if (!role) {
-                return next();
-            }
-
-            req.role = role.name;
-
-            PermissionService.getByIds(role._permissions).then(function (permissions) {
-                req.permissions = permissions.map(function (permission) {
-                    return permission.name;
-                });
-                next();
-            }).catch(next);
-        }).catch(next);
-    });
-
-    // Add a method to the request to check permissions.
-    router.use(function (req, res, next) {
-        req.isAuthorized = function (permission) {
-            var err;
-            if (!req.isAuthenticated() || !req.permissions || req.permissions.indexOf(permission) === -1) {
-                err = new Error("Not Authorized");
-                err.status = 401;
-                return err;
-            }
-            return null;
-        };
-        next();
-    });
-
-    // Validate the token response.
-    router.post('/api/oauth/validate', function (req, res, next) {
+    function validateToken(req) {
         var clientId,
             http,
             JWS,
@@ -68,11 +28,11 @@ module.exports = function (router) {
         JWS = rsa.jws.JWS;
 
         if (!token) {
-            return next(new Error("You are not logged in to Blackbaud.com!"));
+            return Promise.reject(new Error("You are not logged in to Blackbaud.com!"));
         }
 
         // Validate our token against the requestor.
-        http('https://signin.blackbaud.com/oauth2/certs').then(function (response) {
+        return http('https://signin.blackbaud.com/oauth2/certs').then(function (response) {
             var found,
                 header,
                 isValid,
@@ -86,9 +46,6 @@ module.exports = function (router) {
             header = JWS.readSafeJSONString(rsa.b64utoutf8(token.split('.')[0]));
             payload = JWS.readSafeJSONString(rsa.b64utoutf8(token.split('.')[1]));
             successRedirect = 'http://localhost:3000/';
-
-            console.log("KEYS:", keys);
-            console.log("PAYLOAD:", payload);
 
             // Find the published key that was used to sign the JWT.
             keys.forEach(function (key) {
@@ -134,28 +91,58 @@ module.exports = function (router) {
             });
 
             if (found && isValid) {
-
-                console.log("Email", payload.email);
-                console.log("Success redirect", successRedirect);
-
-                UserService.getByEmailAddress(payload.email).then(function (data) {
-                    console.log("USER:", data);
-                    res.status(200).json({
-                        "status": true
-                    });
-                }).catch(function () {
-                    console.log("User not found.");
-                    res.status(200).json({
-                        "status": false
-                    });
-                });
-
+                return Promise.resolve(payload);
             } else {
-                console.log("Invalid!");
-                res.status(401).json({
-                    "status": false
-                });
+                return Promise.reject(new Error("Token invalid."));
             }
+        });
+    }
+
+    // Add role and permissions to the request.
+    router.use(function (req, res, next) {
+        req.role = null;
+        req.permissions = [];
+
+        if (!req.isAuthenticated()) {
+            return next();
+        }
+
+        RoleService.getById(req.user._role).then(function (role) {
+            if (!role) {
+                return next();
+            }
+
+            req.role = role.name;
+
+            PermissionService.getByIds(role._permissions).then(function (permissions) {
+                req.permissions = permissions.map(function (permission) {
+                    return permission.name;
+                });
+                next();
+            }).catch(next);
+        }).catch(next);
+    });
+
+    // Add a method to the request to check permissions.
+    router.use(function (req, res, next) {
+        req.isAuthorized = function (permission) {
+            var err;
+            if (!req.isAuthenticated() || !req.permissions || req.permissions.indexOf(permission) === -1) {
+                err = new Error("Not Authorized");
+                err.status = 401;
+                return err;
+            }
+            return null;
+        };
+        next();
+    });
+
+    // Validate the token response.
+    router.post('/api/oauth/validate', function (req, res, next) {
+        validateToken(req).then(function () {
+            res.status(200).json({
+                status: true
+            });
         }).catch(next);
     });
 
@@ -192,6 +179,29 @@ module.exports = function (router) {
         })(req, res, next);
     });
 
+    router.post('/api/login-with-token', function (req, res, next) {
+        validateToken(req)
+            .then(function (payload) {
+                if (!payload.email) {
+                    return next(new Error("User not found!"));
+                }
+                UserService
+                    .getByEmailAddress(payload.email)
+                    .then(function (user) {
+                        req.logIn(user, function (err) {
+                            if (err) {
+                                return next(new Error('Could not log in user!'));
+                            }
+                            res.status(200).json({
+                                message: 'Login successful!'
+                            });
+                        });
+                    })
+                    .catch(next);
+            })
+            .catch(next);
+    });
+
     router.get('/api/logout', function (req, res) {
         req.logout();
         res.status(200).json({
@@ -200,18 +210,6 @@ module.exports = function (router) {
     });
 
     router.get('/api/user-status', function (req, res) {
-        // var err = new Error("Please login to Blackbaud.com.");
-        // err.status = 401;
-        //
-        // var http = require('request-promise');
-        // http(url).then(function (res) {
-        //             console.log("SUCCES", res);
-        //         }).catch(function (res) {
-        //             console.log("ERROR", res);
-        //         });
-        //
-        // return next(err);
-
         if (!req.isAuthenticated()) {
             return res.status(200).json({
                 status: false,

@@ -28,6 +28,17 @@
                 })
                 .catch(MessageService.handleError);
         };
+
+        vm.loginWithBlackbaud = function () {
+            AuthService
+                .loginWithToken()
+                .then(function () {
+                    if (vm.onSuccess) {
+                        vm.onSuccess.call();
+                    }
+                })
+                .catch(MessageService.handleError);
+        };
     }
 
     LoginFormController.$inject = [

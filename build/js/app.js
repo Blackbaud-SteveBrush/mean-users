@@ -6399,40 +6399,52 @@ angular
         $urlRouterProvider
             .otherwise('/');
 
+        // Views that do not require OAuth.
         $stateProvider
-            .state('home', {
+            .state('logout', {
+                url: '/logout',
+                controller: 'LogoutController'
+            })
+            .state('validate', {
+                url: '/oauth/?validate=&id_token&state',
+                template: '',
+                controller: 'TokenController as tokenCtrl'
+            });
+
+        // OAuth protected views.
+        $stateProvider
+            .state('oauth', {
                 url: '/',
+                templateUrl: '../public/app/views/app.html',
+                controller: 'OAuthController as oAuthCtrl'
+            })
+            .state('home', {
+                url: 'home',
+                parent: 'oauth',
                 templateUrl: '../public/app/views/home.html',
                 controller: 'HomeController as homeCtrl'
             })
             .state('login', {
-                url: '/login',
+                url: 'login',
+                parent: 'oauth',
                 templateUrl: '../public/app/views/login.html',
                 controller: 'LoginPageController as loginPageCtrl'
             })
-            .state('logout', {
-                url: '/logout',
-                template: '',
-                controller: ['$state', 'AuthService', function ($state, AuthService) {
-                    AuthService.logout().then(function () {
-                        $state.go('login', {}, {
-                            reload: true
-                        });
-                    });
-                }]
-            })
             .state('register', {
-                url: '/register',
+                url: 'register',
+                parent: 'oauth',
                 templateUrl: '../public/app/views/register.html',
                 controller: 'RegisterController as registerCtrl'
             })
             .state('reset-password', {
-                url: '/reset-password/:token',
+                url: 'reset-password/:token',
+                parent: 'oauth',
                 templateUrl: '../public/app/views/reset-password.html',
                 controller: 'ResetPasswordController as resetPasswordCtrl'
             })
             .state('profile', {
-                url: '/profile',
+                url: 'profile',
+                parent: 'oauth',
                 templateUrl: '../public/app/views/profile.html',
                 controller: 'ProfileController as profileCtrl',
                 data: {
@@ -6441,13 +6453,9 @@ angular
                     }
                 }
             })
-            .state('oauth', {
-                url: '/id_token:idToken',
-                template: '',
-                controller: 'TokenController'
-            })
             .state('admin', {
-                url: '/admin',
+                url: 'admin',
+                parent: 'oauth',
                 abstract: true,
                 template: '<ui-view/>',
                 data: {
@@ -6480,8 +6488,7 @@ angular
 
     function ConfigSession(localStorageServiceProvider) {
         localStorageServiceProvider
-            .setPrefix('serviceCatalog')
-            .setStorageType('sessionStorage');
+            .setPrefix('serviceCatalog');
     }
 
     function Run($rootScope, $state, $window, AuthService, bbOmnibarConfig, MessageService) {
@@ -6585,41 +6592,6 @@ angular
         vm.isLoggedIn = AuthService.isLoggedIn;
         vm.isAuthorized = AuthService.isAuthorized;
 
-        /**
-         * Login Process:
-         * --------------
-         * 1. On page load, wait for the Omnibar to alert Angular app about user status.
-         * 2. If the user is logged out, redirect them to blackbaud.com to login. Upon successful login, save the access token in the Angular app's local storage.
-         * 3. If the user is logged into blackbaud.com, the access token stored in the session is validated.
-         * 4. If the token is valid, the user may automatically login to the catalog using the access token, by clicking on a "Login with Blackbaud.com" button.
-         * 5. If the token is invalid, redirect to blackbaud.com to login.
-         * 6. A user can logout of the catalog with a logout button, but still view the site. If the user is validated by BBAUTH, but logged out of the catalog, they may click the "Login" button to automatically login again.
-         */
-        $scope.$on('omnibarUserLoaded', function (e, user) {
-            if (!user.id) {
-                console.log("Not logged in to blackbaud.com. Redirecting...");
-                AuthService
-                    .logout()
-                    .then(AuthService.redirect)
-                    .catch(AuthService.redirect);
-            } else {
-                console.log("Already logged in to blackbaud.com.");
-                //console.log("Logged in!", user, AuthService.getAccessToken());
-                AuthService
-                    .validateToken()
-                    .then(function () {
-                        console.log("Token validated!");
-                    })
-                    .catch(function () {
-                        console.log("Token invalid.");
-                        // AuthService
-                        //     .logout()
-                        //     .then(AuthService.redirect)
-                        //     .catch(AuthService.redirect);
-                    });
-            }
-        });
-
         $scope.$on('ccAuthorizationSuccess', function () {
             vm.isReady = true;
             $timeout(function () {
@@ -6643,16 +6615,103 @@ angular
 (function (angular) {
     'use strict';
 
+    function LogoutController($state, AuthService) {
+        AuthService.logout().then(function () {
+            $state.go('login', {}, {
+                reload: true
+            });
+        });
+    }
+
+    LogoutController.$inject = [
+        '$state',
+        'AuthService'
+    ];
+
+    angular.module('capabilities-catalog')
+        .controller('LogoutController', LogoutController);
+
+}(window.angular));
+
+(function (angular) {
+    'use strict';
+
+    function OAuthController($scope, $state, $timeout, AuthService) {
+        var vm;
+
+        vm = this;
+        // vm.isLoggedIn = AuthService.isLoggedIn;
+        // vm.isAuthorized = AuthService.isAuthorized;
+
+        /**
+         * Login Process:
+         * --------------
+         * 1. On page load, wait for the Omnibar to alert Angular app about user status.
+         * 2. If the user is logged out, redirect them to blackbaud.com to login. Upon successful login, save the access token in the Angular app's local storage.
+         * 3. If the user is logged into blackbaud.com, the access token stored in the session is validated.
+         * 4. If the token is valid, the user may automatically login to the catalog using the access token, by clicking on a "Login with Blackbaud.com" button.
+         * 5. If the token is invalid, redirect to blackbaud.com to login.
+         * 6. A user can logout of the catalog with a logout button, but still view the site. If the user is validated by BBAUTH, but logged out of the catalog, they may click the "Login" button to automatically login again.
+         */
+        $scope.$on('omnibarUserLoaded', function (e, user) {
+            vm.isReady = false;
+
+            // Don't validate the token on the OAuth redirect.
+            console.log("Checking current state...", $state.$current.name);
+            if ($state.$current.name === 'validate') {
+                return;
+            }
+
+            if (!user.id) {
+                console.log("Not logged in to blackbaud.com. Redirecting...");
+                AuthService
+                    .logout()
+                    .then(AuthService.redirect);
+            } else {
+                console.log("Already logged in to blackbaud.com.");
+                //console.log("Logged in!", user, AuthService.getAccessToken());
+                AuthService
+                    .validateToken()
+                    .then(function () {
+                        console.log("Token validated!");
+                        vm.isReady = true;
+                    })
+                    .catch(function () {
+                        console.log("Token invalid.");
+                        console.log("Redirecting...");
+                        AuthService
+                            .logout()
+                            .then(AuthService.redirect);
+                    });
+            }
+        });
+    }
+
+    OAuthController.$inject = [
+        '$scope',
+        '$state',
+        '$timeout',
+        'AuthService'
+    ];
+
+    angular.module('capabilities-catalog')
+        .controller('OAuthController', OAuthController);
+
+}(window.angular));
+
+(function (angular) {
+    'use strict';
+
     /**
      * Handles the authentication redirect
      * and parses token information from the URL hash.
      */
-    function TokenController($location, $state, SessionService) {
+    function TokenController($window, $state, SessionService) {
         var hash,
             hashArray,
             hashPairs;
 
-        hash = $location.path().substr(1);
+        hash = $window.location.href.split('?')[1];
         hashArray = hash.split('&');
         hashPairs = {};
 
@@ -6666,7 +6725,7 @@ angular
     }
 
     TokenController.$inject = [
-        '$location',
+        '$window',
         '$state',
         'SessionService'
     ];
@@ -6783,7 +6842,7 @@ angular
 (function (angular) {
     'use strict';
 
-    function AuthService($http, $q, $window, SessionService) {
+    function AuthService($http, $q, $window, $interval, SessionService) {
         var isLoggedIn,
             service,
             user;
@@ -6871,11 +6930,17 @@ angular
             return deferred.promise;
         };
 
+        service.loginWithToken = function () {
+            if (!SessionService.get('token')) {
+                return $q.reject("Token invalid.");
+            }
+            return $http.post('/api/login-with-token', SessionService.get('token'));
+        };
+
         service.logout = function () {
             var deferred;
 
             deferred = $q.defer();
-            SessionService.clearAll();
 
             $http
                 .get('/api/logout')
@@ -6892,15 +6957,15 @@ angular
         };
 
         service.redirect = function () {
-            var redirect = 'https://signin.blackbaud.com/' +
+            var redirect;
+            redirect = 'https://signin.blackbaud.com/' +
                 'oauth2/authorize?response_type=id_token' +
                 '&scope=openid profile email' +
                 '&client_id=' + encodeURIComponent('renxt.blackbaud.com') +
                 '&state=' + encodeURIComponent('abc123') +
                 '&nonce=' + encodeURIComponent('abc123') +
-                '&redirect_uri=' + encodeURIComponent('http://localhost:3000/');
-            console.log("REDIRECT", redirect);
-            // $window.location.href = redirect;
+                '&redirect_uri=' + encodeURIComponent('http://localhost:3000/#/oauth/?validate=');
+            $window.location.href = redirect;
         };
 
         service.register = function (data) {
@@ -6912,7 +6977,6 @@ angular
         };
 
         service.validateToken = function () {
-            console.log("Validating access token...");
             return $http.post('/api/oauth/validate', SessionService.get('token'));
         };
     }
@@ -6921,6 +6985,7 @@ angular
         '$http',
         '$q',
         '$window',
+        '$interval',
         'SessionService'
     ];
 
@@ -7532,6 +7597,17 @@ angular
         vm.submit = function () {
             AuthService
                 .login(vm.formData.emailAddress, vm.formData.password)
+                .then(function () {
+                    if (vm.onSuccess) {
+                        vm.onSuccess.call();
+                    }
+                })
+                .catch(MessageService.handleError);
+        };
+
+        vm.loginWithBlackbaud = function () {
+            AuthService
+                .loginWithToken()
                 .then(function () {
                     if (vm.onSuccess) {
                         vm.onSuccess.call();
@@ -8151,6 +8227,8 @@ angular
 }(window.angular));
 
 angular.module('capabilities-catalog.templates', []).run(['$templateCache', function($templateCache) {
+    $templateCache.put('../public/app/views/app.html',
+        '<div ng-if=oAuthCtrl.isReady><div ng-if=appCtrl.isReady><header id=header><bb-navbar class="navbar navbar-inverse bb-navbar"><div class=container><ul ng-if=!appCtrl.isLoggedIn() class="nav navbar-nav navbar-right"><li ui-sref-active=bb-navbar-active><a href ui-sref=login>Log in</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=register>Register</a></li></ul><ul ng-if=appCtrl.isLoggedIn() class="nav navbar-nav navbar-right"><li ui-sref-active=bb-navbar-active><a href ui-sref=profile ng-bind=appCtrl.user.emailAddress></a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.users>Users</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.roles>Roles</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=admin.permissions>Permissions</a></li><li ui-sref-active=bb-navbar-active><a href ui-sref=logout>Log out</a></li></ul><ul class="nav navbar-nav navbar-left"><li ui-sref-active=bb-navbar-active><a href ui-sref=home>Home</a></li></ul></div></bb-navbar></header><div id=content><div class=container><ui-view></ui-view></div></div></div></div>');
     $templateCache.put('../public/app/views/home.html',
         'Home');
     $templateCache.put('../public/app/views/login.html',
@@ -8180,7 +8258,7 @@ angular.module('capabilities-catalog.templates', []).run(['$templateCache', func
     $templateCache.put('../public/app/components/chart/chart.html',
         '<div class=chart ng-if=::chartCtrl.model.length ng-click=chartCtrl.openModal()><div class=meter style="width:{{:: chartCtrl.model.length * 30 }}px"><div ng-repeat="total in ::chartCtrl.totals track by $index" class="bar {{:: total.class }}" style="width:{{:: total.percentage }}%" tooltip-placement=top tooltip-popup-delay=200 uib-tooltip="{{:: total.model.adoptionStatus.name }} · {{::total.count}} adopting"></div></div></div>');
     $templateCache.put('../public/app/components/forms/login/login-form.html',
-        '<div bb-scroll-into-view=formCtrl.scrollToTop><div ng-if=formCtrl.success class="alert alert-success" ng-bind-html=formCtrl.trustHtml(formCtrl.success)></div><div ng-if=formCtrl.error class="alert alert-danger" ng-bind-html=formCtrl.trustHtml(formCtrl.error)></div><div ng-if=formCtrl.isBlackbaudAuthenticated><button class="btn btn-primary">Login using Blackbaud.com</button></div><form name=loginForm id=form-login class=form-horizontal ng-submit=formCtrl.submit() method=post novalidate><div class=form-group ng-class="{\'has-error\': loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid}"><label class="col-sm-2 control-label">Email Address:</label><div class=col-sm-10><input class=form-control id=email-address name=emailAddress ng-model=formCtrl.formData.emailAddress placeholder=(required) required><div ng-show="loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid" class=help-block>Email Address is required.</div></div></div><div class=form-group ng-class="{\'has-error\': loginForm.password.$touched && loginForm.password.$invalid}"><label class="col-sm-2 control-label">Password:</label><div class=col-sm-10><input class=form-control type=password name=password ng-model=formCtrl.formData.password placeholder=(required) required><div ng-show="loginForm.password.$touched && loginForm.password.$invalid" class=help-block>Password is required.</div></div></div><div class=form-group><label class="col-sm-2 control-label"></label><div class=col-sm-10><a href ui-sref=reset-password>Forgot your password?</a></div></div><div class="form-group form-buttons"><div class="col-sm-offset-2 col-sm-10"><button class="btn btn-primary btn-lg" id=login-form-button type=submit ng-disabled=loginForm.$invalid><i class="fa fa-login"></i>Log In</button></div></div></form></div>');
+        '<div bb-scroll-into-view=formCtrl.scrollToTop><div ng-if=formCtrl.success class="alert alert-success" ng-bind-html=formCtrl.trustHtml(formCtrl.success)></div><div ng-if=formCtrl.error class="alert alert-danger" ng-bind-html=formCtrl.trustHtml(formCtrl.error)></div><p><button ng-click=formCtrl.loginWithBlackbaud() class="btn btn-lg btn-primary">Login using Blackbaud.com</button></p><form name=loginForm id=form-login class=form-horizontal ng-submit=formCtrl.submit() method=post novalidate><div class=form-group ng-class="{\'has-error\': loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid}"><label class="col-sm-2 control-label">Email Address:</label><div class=col-sm-10><input class=form-control id=email-address name=emailAddress ng-model=formCtrl.formData.emailAddress placeholder=(required) required><div ng-show="loginForm.emailAddress.$touched && loginForm.emailAddress.$invalid" class=help-block>Email Address is required.</div></div></div><div class=form-group ng-class="{\'has-error\': loginForm.password.$touched && loginForm.password.$invalid}"><label class="col-sm-2 control-label">Password:</label><div class=col-sm-10><input class=form-control type=password name=password ng-model=formCtrl.formData.password placeholder=(required) required><div ng-show="loginForm.password.$touched && loginForm.password.$invalid" class=help-block>Password is required.</div></div></div><div class=form-group><label class="col-sm-2 control-label"></label><div class=col-sm-10><a href ui-sref=reset-password>Forgot your password?</a></div></div><div class="form-group form-buttons"><div class="col-sm-offset-2 col-sm-10"><button class="btn btn-primary btn-lg" id=login-form-button type=submit ng-disabled=loginForm.$invalid><i class="fa fa-login"></i>Log In</button></div></div></form></div>');
     $templateCache.put('../public/app/components/modals/chart-modal.html',
         '<bb-modal><div class=modal-wrapper><bb-modal-header>{{:: modalCtrl.title }}</bb-modal-header><div class="modal-body modal-table"><div class=table-responsive><table class="table table-striped"><tr ng-repeat="item in ::modalCtrl.model track by $index"><td><h4 ng-bind=::item.name></h4><div><span ng-bind-html=::item.defaultComment></span>&nbsp; <span ng-bind-html=::item.comment></span></div></td><td style="white-space: nowrap"><span class="bullet {{:: item.class }}"></span><span ng-bind=::item.adoptionStatus.name></span></td></tr></table></div></div><bb-modal-footer><button ng-click=$close() class="btn btn-default">Close</button></bb-modal-footer></div></bb-modal>');
     $templateCache.put('../public/app/components/modals/login-modal.html',

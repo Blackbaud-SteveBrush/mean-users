@@ -11,40 +11,52 @@
         $urlRouterProvider
             .otherwise('/');
 
+        // Views that do not require OAuth.
         $stateProvider
-            .state('home', {
+            .state('logout', {
+                url: '/logout',
+                controller: 'LogoutController'
+            })
+            .state('validate', {
+                url: '/oauth/?validate=&id_token&state',
+                template: '',
+                controller: 'TokenController as tokenCtrl'
+            });
+
+        // OAuth protected views.
+        $stateProvider
+            .state('oauth', {
                 url: '/',
+                templateUrl: '../public/app/views/app.html',
+                controller: 'OAuthController as oAuthCtrl'
+            })
+            .state('home', {
+                url: 'home',
+                parent: 'oauth',
                 templateUrl: '../public/app/views/home.html',
                 controller: 'HomeController as homeCtrl'
             })
             .state('login', {
-                url: '/login',
+                url: 'login',
+                parent: 'oauth',
                 templateUrl: '../public/app/views/login.html',
                 controller: 'LoginPageController as loginPageCtrl'
             })
-            .state('logout', {
-                url: '/logout',
-                template: '',
-                controller: ['$state', 'AuthService', function ($state, AuthService) {
-                    AuthService.logout().then(function () {
-                        $state.go('login', {}, {
-                            reload: true
-                        });
-                    });
-                }]
-            })
             .state('register', {
-                url: '/register',
+                url: 'register',
+                parent: 'oauth',
                 templateUrl: '../public/app/views/register.html',
                 controller: 'RegisterController as registerCtrl'
             })
             .state('reset-password', {
-                url: '/reset-password/:token',
+                url: 'reset-password/:token',
+                parent: 'oauth',
                 templateUrl: '../public/app/views/reset-password.html',
                 controller: 'ResetPasswordController as resetPasswordCtrl'
             })
             .state('profile', {
-                url: '/profile',
+                url: 'profile',
+                parent: 'oauth',
                 templateUrl: '../public/app/views/profile.html',
                 controller: 'ProfileController as profileCtrl',
                 data: {
@@ -53,13 +65,9 @@
                     }
                 }
             })
-            .state('oauth', {
-                url: '/id_token:idToken',
-                template: '',
-                controller: 'TokenController'
-            })
             .state('admin', {
-                url: '/admin',
+                url: 'admin',
+                parent: 'oauth',
                 abstract: true,
                 template: '<ui-view/>',
                 data: {
@@ -92,8 +100,7 @@
 
     function ConfigSession(localStorageServiceProvider) {
         localStorageServiceProvider
-            .setPrefix('serviceCatalog')
-            .setStorageType('sessionStorage');
+            .setPrefix('serviceCatalog');
     }
 
     function Run($rootScope, $state, $window, AuthService, bbOmnibarConfig, MessageService) {

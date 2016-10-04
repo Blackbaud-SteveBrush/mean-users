@@ -5,12 +5,12 @@
      * Handles the authentication redirect
      * and parses token information from the URL hash.
      */
-    function TokenController($location, $state, SessionService) {
+    function TokenController($window, $state, SessionService) {
         var hash,
             hashArray,
             hashPairs;
 
-        hash = $location.path().substr(1);
+        hash = $window.location.href.split('?')[1];
         hashArray = hash.split('&');
         hashPairs = {};
 
@@ -24,7 +24,7 @@
     }
 
     TokenController.$inject = [
-        '$location',
+        '$window',
         '$state',
         'SessionService'
     ];

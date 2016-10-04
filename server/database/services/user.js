@@ -23,7 +23,7 @@ Service.prototype.getByEmailAddress = function (emailAddress) {
         'emailAddress': emailAddress
     }).exec().then(function (user) {
         if (!user) {
-            return Promise.reject(new Error("User not found with that email address."));
+            return Promise.reject(new Error("User not found with email address, " + emailAddress));
         }
         return Promise.resolve(user);
     });
@@ -92,10 +92,6 @@ Service.prototype.sendResetPasswordRequest = function (emailAddress) {
             user.password = self.getRandomPassword();
             user.resetPasswordToken = sha1(emailAddress + ':' + user.password + Date.now());
             return user.save();
-        })
-        .then(function (data) {
-            console.log("sendResetPasswordRequest", data);
-            return Promise.resolve(data);
         });
 };
 
